@@ -11,7 +11,6 @@ in
     description = "Path to the system's current flake";
   };
 
-
   imports = [
     (importWithArgs ./application/default.nix)
     (importWithArgs ./container/default.nix)
