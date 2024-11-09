@@ -1,8 +1,8 @@
-{ config, lib, pkgs, outputs, ... }:
+{ config, lib, pkgs, outputs, configDir, ... }:
 let
   inherit (config.networking) hostName;
   hosts = outputs.nixosConfigurations;
-  pubKey = host: ../../hosts/${host}/secrets/ssh_host_ed25519_key.pub;
+  pubKey = host: ${configDir}hosts/${host}/secrets/ssh_host_ed25519_key.pub;
   cfg = config.host.service.ssh;
   logLevel =
     if config.host.network.firewall.fail2ban.enable
