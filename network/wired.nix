@@ -43,6 +43,7 @@ in {
               };
             };
           });
+          default = { };
           description = "Configuration for wired network interfaces.";
         };
       };
