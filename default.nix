@@ -15,6 +15,7 @@ in
   imports = [
     (importWithArgs ./application/default.nix)
     (importWithArgs ./container/default.nix)
+    (importWithArgs ./darwin/default.nix)
     (importWithArgs ./feature/default.nix)
     (importWithArgs ./filesystem/default.nix)
     (importWithArgs ./hardware/default.nix)
