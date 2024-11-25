@@ -3,9 +3,8 @@
 with lib;
 {
   imports = [
+    ./dns.nix
     ./firewall
-    ./domainname.nix
-    ./hostname.nix
     ./vpn
     ./wired.nix
   ];

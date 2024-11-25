@@ -7,7 +7,7 @@ let
   container_image_name = "tiredofit/alpine";
   container_image_tag = "3.19";
   cfg = config.host.container.${container_name};
-  hostname = config.host.network.hostname;
+  hostname = config.host.network.dns.hostname;
   activationScript = "system.activationScripts.docker_${container_name}";
 in
   with lib;
