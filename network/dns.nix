@@ -43,7 +43,7 @@ in
       };
       stub = mkOption {
         type = types.bool;
-        default = "true";
+        default = true;
         description = "Enable systemd-resolved's DNSStubListener. May cause issues when running DNS servers.";
       };
     };
