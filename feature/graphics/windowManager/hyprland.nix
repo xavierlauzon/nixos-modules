@@ -27,12 +27,12 @@ in
         "org.freedesktop.impl.portal.Screenshot" = [ "hyprland" ];
         "org.freedesktop.portal.FileChooser" = [ "xdg-desktop-portal-shana" ];
       };
-      extraPortals = [
-        pkgs.xdg-desktop-portal-hyprland
+      extraPortals = with pkgs; [
 #        inputs.hyprland.packages.${pkgs.system}.xdg-desktop-portal-hyprland
-        pkgs.xdg-desktop-portal-gtk
-        pkgs.xdg-desktop-portal-wlr
-        pkgs.xdg-desktop-portal-shana
+        xdg-desktop-portal-hyprland
+        xdg-desktop-portal-gtk
+        xdg-desktop-portal-wlr
+        xdg-desktop-portal-shana
       ];
     };
   };

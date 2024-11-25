@@ -5,7 +5,11 @@ let
   device = config.host.hardware ;
 in {
   config = mkIf (device.cpu == "amd" || device.cpu == "vm-amd") {
-    hardware.cpu.amd.updateMicrocode = true;
+   boot.blacklistedKernelModules = [ "k10temp" ];
+   boot.extraModulePackages = [ config.boot.kernelPackages.zenpower ];
+   boot.kernelModules = [ "zenpower" ]; 
+   
+   hardware.cpu.amd.updateMicrocode = true;
 
     host.feature.boot.kernel = {
       modules = [
@@ -15,6 +19,9 @@ in {
         "amd_pstate=active"
       ];
     };
-  nixpkgs.hostPlatform = "x86_64-linux";
+
+    nixpkgs = {
+      hostPlatform = "x86_64-linux";
+    };
   };
 }
