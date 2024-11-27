@@ -13,7 +13,7 @@ let
   tcc_container_image_tag = "latest";
 
   cfg = config.host.container.${container_name};
-  hostname = config.host.network.hostname;
+  hostname = config.host.network.dns.hostname;
   activationScript = "system.activationScripts.docker_${container_name}";
 in
   with lib;

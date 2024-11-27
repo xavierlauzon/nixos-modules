@@ -7,7 +7,7 @@ let
   container_image_name = "tiredofit/openldap-fusiondirectory";
   container_image_tag = "2.6-1.4";
   cfg = config.host.container.${container_name};
-  hostname = config.host.network.hostname;
+  hostname = config.host.network.dns.hostname;
   activationScript = "system.activationScripts.docker_${container_name}";
 in
   with lib;
