@@ -1,13 +1,13 @@
 {config, lib, pkgs, ...}:
 
 let
-  container_name = "fluentbit";
-  container_description = "Enables fluentbit log forwarding container";
+  container_name = "s3ql";
+  container_description = "Enables S3QL mounted filesystem";
   container_image_registry = "docker.io";
-  container_image_name = "tiredofit/alpine";
-  container_image_tag = "3.19";
+  container_image_name = "tiredofit/s3ql";
+  container_image_tag = "latest";
   cfg = config.host.container.${container_name};
-  hostname = config.host.network.dns.hostname;
+  hostname = config.host.network.hostname;
   activationScript = "system.activationScripts.docker_${container_name}";
 in
   with lib;
@@ -60,31 +60,41 @@ in
     host.feature.virtualization.docker.containers."${container_name}" = {
       image = "${cfg.image.name}:${cfg.image.tag}";
       volumes = [
-        "/var/local/data/_system/${container_name}/logs:/var/log/fluentbit"
+        "/var/local/data/_system/${container_name}/config:/config"
+        "/var/local/data/_system/${container_name}/cache:/cache"
+        "/var/local/data/_system/${container_name}/logs:/logs"
+        "/mnt/s3ql:/data:shared"
       ];
       environment = {
-        "TIMEZONE" = "America/Toronto";
+        "TIMEZONE" = "America/Vancouver";
         "CONTAINER_NAME" = "${hostname}-${container_name}";
         "CONTAINER_ENABLE_MONITORING" = cfg.monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = cfg.logship;
 
-        #"FLUENTBIT_OUTPUT" = "LOKI";                         # hosts/common/secrets/container-fluentbit.env
-        #"FLUENTBIT_OUTPUT_LOKI_HOST" = "loki.example.com";   # hosts/common/secrets/container-fluentbit.env
-        #"FLUENTBIT_OUTPUT_LOKI_PORT" = "443";                # hosts/common/secrets/container-fluentbit.env
-        #"FLUENTBIT_OUTPUT_LOKI_TLS" = "TRUE";                # hosts/common/secrets/container-fluentbit.env
-        #"FLUENTBIT_OUTPUT_LOKI_TLS_VERIFY" = "TRUE";         # hosts/common/secrets/container-fluentbit.env
-        #"FLUENTBIT_OUTPUT_LOKI_USER" = "username";           # hosts/<hostname>/secrets/container-fluentbit.env
-        #"FLUENTBIT_OUTPUT_LOKI_PASS" = "password";           # hosts/<hostname>/secrets/container-fluentbit.env
+        #"MODE" = "normal";
+        #
+        #"S3_HOST" = "s3c://s3.region.wasabisys.com:443/bucket";
+        #"S3_KEY_ID" = "id";
+        #"S3_KEY_SECRET" = "secret";
+        #"S3QL_PASS" = "abcdefgh";
+        #
+        #"ENABLE_CACHE" = "TRUE";
+        #"ENABLE_PERSISTENT_CACHE" = "TRUE";
+        #"COMPRESSION"= "none";
+        #"LOG_TYPE" = "FILE";
+        #"DEBUG_MODE" = "FALSE";
+
       };
       environmentFiles = [
-        config.sops.secrets."common-container-${container_name}".path
         config.sops.secrets."host-container-${container_name}".path
       ];
       extraOptions = [
-        "--memory=1024M"
+        #"--memory=256M" ## TODO: Map
         "--network-alias=${hostname}-${container_name}"
-        "--network-alias=fluent-proxy"
-        "--network-alias=logshipper"
+        "--pull=always"
+        "--cap-add=SYS_ADMIN"
+        "--device=/dev/net/tun"
+        "--privileged"
       ];
       networks = [
         "services"
@@ -98,14 +108,9 @@ in
     };
 
     sops.secrets = {
-      "common-container-${container_name}" = {
-        format = "dotenv";
-        sopsFile = ../../hosts/common/secrets/container/container-${container_name}.env;
-        restartUnits = [ "docker-${container_name}.service" ];
-      };
       "host-container-${container_name}" = {
         format = "dotenv";
-        sopsFile = ../../hosts/${hostname}/secrets/container/container-${container_name}.env;
+        sopsFile = "${config.host.configDir}/hosts/${hostname}/secrets/container/container-${container_name}.env";
         restartUnits = [ "docker-${container_name}.service" ];
       };
     };
@@ -115,6 +120,12 @@ in
         if [ ! -d /var/local/data/_system/${container_name}/logs ]; then
             mkdir -p /var/local/data/_system/${container_name}/logs
             ${pkgs.e2fsprogs}/bin/chattr +C /var/local/data/_system/${container_name}/logs
+        fi
+
+        ## This one stores cache in here so lets disable CoW
+        if [ ! -d /var/local/data/_system/${container_name}/cache ]; then
+            mkdir -p /var/local/data/_system/${container_name}/cache
+            ${pkgs.e2fsprogs}/bin/chattr +C /var/local/data/_system/${container_name}/cache
         fi
       '';
 

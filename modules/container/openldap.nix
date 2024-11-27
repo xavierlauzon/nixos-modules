@@ -7,7 +7,7 @@ let
   container_image_name = "tiredofit/openldap-fusiondirectory";
   container_image_tag = "2.6-1.4";
   cfg = config.host.container.${container_name};
-  hostname = config.host.network.dns.hostname;
+  hostname = config.host.network.hostname;
   activationScript = "system.activationScripts.docker_${container_name}";
 in
   with lib;
@@ -86,7 +86,7 @@ in
         "/var/local/data/_system/${container_name}/logs:/logs"
       ];
       environment = {
-        "TIMEZONE" = "America/Toronto";
+        "TIMEZONE" = "America/Vancouver";
         "CONTAINER_NAME" = "${hostname}-${container_name}";
         "CONTAINER_ENABLE_MONITORING" = cfg.monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = cfg.logship;
@@ -159,7 +159,7 @@ in
     sops.secrets = {
       "host-container-${container_name}" = {
         format = "dotenv";
-        sopsFile = ../../hosts/${hostname}/secrets/container/container-${container_name}.env;
+        sopsFile ="${config.host.configDir}/hosts/${hostname}/secrets/container/container-${container_name}.env";
         restartUnits = [ "docker-${container_name}.service" ];
       };
     };

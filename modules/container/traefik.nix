@@ -13,7 +13,7 @@ let
   tcc_container_image_tag = "latest";
 
   cfg = config.host.container.${container_name};
-  hostname = config.host.network.dns.hostname;
+  hostname = config.host.network.hostname;
   activationScript = "system.activationScripts.docker_${container_name}";
 in
   with lib;
@@ -117,7 +117,7 @@ in
         "/var/local/data/_system/${container_name}/logs:/data/logs"
       ];
       environment = {
-        "TIMEZONE" = "America/Toronto";
+        "TIMEZONE" = "America/Vancouver";
         "CONTAINER_NAME" = "${hostname}-${container_name}";
         "CONTAINER_ENABLE_MONITORING" = cfg.monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = cfg.logship;
@@ -159,7 +159,7 @@ in
     sops.secrets = {
       "common-container-${container_name}" = {
         format = "dotenv";
-        sopsFile = ../../hosts/common/secrets/container/container-${container_name}.env;
+        sopsFile = "${config.host.configDir}/hosts/common/secrets/container/container-${container_name}.env";
         restartUnits = [ "docker-${container_name}.service" ];
       };
     };
@@ -183,7 +183,7 @@ in
         "/var/local/data/_system/${container_name}/logs/tcc:/logs"
       ];
       environment = {
-        "TIMEZONE" = "America/Toronto";
+        "TIMEZONE" = "America/Vancouver";
         "CONTAINER_NAME" = "${hostname}-${tcc_container_name}";
         "CONTAINER_ENABLE_MONITORING" = config.host.container."${tcc_container_name}".monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = config.host.container."${tcc_container_name}".logship;
@@ -221,15 +221,15 @@ in
     };
 
     sops.secrets = {
-      "common-container-${tcc_container_name}" = mkIf ((builtins.pathExists ../../hosts/common/secrets/container/container-${container_name}-${tcc_container_name}.env) && (config.host.container.${tcc_container_name}.enable)) {
+      "common-container-${tcc_container_name}" = mkIf ((builtins.pathExists "${config.host.configDir}/hosts/common/secrets/container/container-${container_name}-${tcc_container_name}.env") && (config.host.container.${tcc_container_name}.enable)) {
         format = "dotenv";
-        sopsFile = ../../hosts/common/secrets/container/container-${container_name}-${tcc_container_name}.env;
+        sopsFile = "${config.host.configDir}/hosts/common/secrets/container/container-${container_name}-${tcc_container_name}.env";
         restartUnits = [ "docker-${tcc_container_name}.service" ];
       };
 
-      "host-container-${tcc_container_name}" = mkIf ((builtins.pathExists ../../hosts/${hostname}/secrets/container/container-${container_name}-${tcc_container_name}.env) && (config.host.container.${tcc_container_name}.enable)) {
+      "host-container-${tcc_container_name}" = mkIf ((builtins.pathExists "${config.host.configDir}/hosts/${hostname}/secrets/container/container-${container_name}-${tcc_container_name}.env") && (config.host.container.${tcc_container_name}.enable)) {
         format = "dotenv";
-        sopsFile = ../../hosts/${hostname}/secrets/container/container-${container_name}-${tcc_container_name}.env;
+        sopsFile = "${config.host.configDir}/hosts/${hostname}/secrets/container/container-${container_name}-${tcc_container_name}.env";
         restartUnits = [ "docker-${tcc_container_name}.service" ];
       };
     };

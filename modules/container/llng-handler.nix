@@ -1,13 +1,13 @@
 {config, lib, pkgs, ...}:
 
 let
-  container_name = "tinc";
-  container_description = "Enables VPN container";
+  container_name = "llng-handler";
+  container_description = "Enables authentication handling container";
   container_image_registry = "docker.io";
-  container_image_name = "tiredofit/tinc";
+  container_image_name = "tiredofit/lemonldap";
   container_image_tag = "latest";
   cfg = config.host.container.${container_name};
-  hostname = config.host.network.dns.hostname;
+  hostname = config.host.network.hostname;
   activationScript = "system.activationScripts.docker_${container_name}";
 in
   with lib;
@@ -59,56 +59,41 @@ in
   config = mkIf cfg.enable {
     host.feature.virtualization.docker.containers."${container_name}" = {
       image = "${cfg.image.name}:${cfg.image.tag}";
+      labels = {
+        "traefik.enable" = "true";
+        "traefik.http.routers.${hostname}-${container_name}.rule" = "Host(`${hostname}.handler.auth.${config.host.network.domainname}`)";
+        "traefik.http.services.${hostname}-${container_name}.loadbalancer.server.port" = "80";
+      };
       volumes = [
-        "/var/local/data/_system/${container_name}/data:/etc/tinc"
-        "/var/local/data/_system/${container_name}/logs:/var/log/tinc"
+        "/var/local/data/_system/${container_name}/logs:/www/logs"
       ];
       environment = {
-        "TIMEZONE" = "America/Toronto";
+        "TIMEZONE" = "America/Vancouver";
         "CONTAINER_NAME" = "${hostname}-${container_name}";
         "CONTAINER_ENABLE_MONITORING" = cfg.monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = cfg.logship;
 
-        #"FLUENTBIT_OUTPUT_FORWARD_HOST" = "127.0.0.1";     # hosts/common/secrets/container-tinc.env
-        #"INTERFACE" = "tun0";                              # hosts/common/secrets/container-tinc.env
+        #"DOMAIN_NAME" = config.host.network.domainname;                  # hosts/common/secrets/container-llng-handler.env
+        #"HANDLER_HOSTNAME" = "${hostname}.handler.auth.example.com";     # hosts/common/secrets/container-llng-handler.env
+        #"HANDLER_ALLOWED_IPS"= "172.16.0.0/12,127.0.01";                 # hosts/common/secrets/container-llng-handler.env
 
-        #"COMPRESSION"= "0";                                # hosts/common/secrets/container-tinc.env
-        #"CRON_PERIOD" = "15";                              # hosts/common/secrets/container-tinc.env
-        #"DEBUG" = "0";                                     # hosts/common/secrets/container-tinc.env
-
-
-        #"ZABBIX_SERVER" = "172.16.0.0/12";                 # hosts/common/secrets/container-tinc.env
-        #"ZABBIX_SERVER_ACTIVE" = "zabbix.example.com";     # hosts/common/secrets/container-tinc.env
-        #"ZABBIX_LISTEN_PORT"= "10056";                     # hosts/common/secrets/container-tinc.env
-        #"ZABBIX_STATUS_PORT"= "8056";                      # hosts/common/secrets/container-tinc.env
-
-        #"NETWORK" ="network_name";                         # hosts/common/secrets/container-tinc.env
-        #"PEERS"= "node1_example_com node2_example_com";    # hosts/common/secrets/container-tinc.env
-
-
-        #"GIT_USER"= "username";                            # hosts/<hostname>/secrets/container-tinc.env
-        #"GIT_PASS"= "password";                            # hosts/<hostname>/secrets/container-tinc.env
-
-        #"ENABLE_WATCHDOG" = "TRUE";                        # hosts/<hostname>/secrets/container-tinc.env
-        #"WATCHDOG_HOST" = "host_env";                      # hosts/<hostname>/secrets/container-tinc.env
-        #"NODE"= "host_env";                                # hosts/<hostname>/secrets/container-tinc.env
-        #"PUBLIC_IP"= "host_env";                           # hosts/<hostname>/secrets/container-tinc.env
-        #"PRIVATE_IP"= "host_env";                          # hosts/<hostname>/secrets/container-tinc.env
+        #"CONFIG_TYPE=REST";                                              # hosts/common/secrets/container-llng-handler.env
+        #"REST_HOST" = "https://auth.example.com/index.psgi/config";      # hosts/common/secrets/container-llng-handler.env
+        #"REST_USER" = "user";                                            # hosts/<hostname>/secrets/container-llng-handler.env
+        #"REST_PASS" = "password";                                        # hosts/<hostname>/secrets/container-llng-handler.env
       };
       environmentFiles = [
         config.sops.secrets."common-container-${container_name}".path
         config.sops.secrets."host-container-${container_name}".path
       ];
       extraOptions = [
-        "--hostname=${hostname}.vpn.${config.host.network.domainname}"
-        "--cpus=0.5"
-        "--memory=256M" ## TODO: Map
-        "--cap-add=SYS_ADMIN"
-        "--device=/dev/net/tun"
-        "--privileged"
-      #  "--network=host"
+        "--memory=512M"
+        "--network-alias=${hostname}-${container_name}"
       ];
-      networks = [ "host" ];
+      networks = [
+        "services"      # Make this the first network
+        "proxy"
+      ];
       autoStart = mkDefault true;
       log-driver = mkDefault "local";
       login = {
@@ -120,12 +105,12 @@ in
     sops.secrets = {
       "common-container-${container_name}" = {
         format = "dotenv";
-        sopsFile = ../../hosts/common/secrets/container/container-${container_name}.env;
+        sopsFile = "${config.host.configDir}/hosts/common/secrets/container/container-${container_name}.env";
         restartUnits = [ "docker-${container_name}.service" ];
       };
       "host-container-${container_name}" = {
         format = "dotenv";
-        sopsFile = ../../hosts/${hostname}/secrets/container/container-${container_name}.env;
+        sopsFile = "${config.host.configDir}/hosts/${hostname}/secrets/container/container-${container_name}.env";
         restartUnits = [ "docker-${container_name}.service" ];
       };
     };

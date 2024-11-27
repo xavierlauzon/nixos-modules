@@ -2,8 +2,8 @@
 
 let
   inherit (config.networking) hostName;
-  hostsecrets = "${config.host.feature.secrets.secretsBasePath}/hosts/${hostName}/secrets/secrets.yaml";
-  commonsecrets = "${config.host.feature.secrets.secretsBasePath}/hosts/common/secrets/secrets.yaml";
+  hostsecrets = "${config.host.configDir}/hosts/${hostName}/secrets/secrets.yaml";
+  commonsecrets = "${config.host.configDir}/hosts/common/secrets/secrets.yaml";
   isEd25519 = k: k.type == "ed25519";
   getKeyPath = k: k.path;
   keys = builtins.filter isEd25519 config.services.openssh.hostKeys;
