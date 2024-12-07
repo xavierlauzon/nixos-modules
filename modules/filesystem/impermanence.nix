@@ -79,15 +79,8 @@ in
             unitConfig.DefaultDependencies = "no";
             serviceConfig.Type = "oneshot";
             script = ''
-              echo "*** DEBUG RAID ENCRYPTED IMPERMANENCE***"
               mkdir -p /mnt
-              set -x
-              while [ ! -e /dev/mapper/${cfg_encrypt.encrypted-partition} ] ; do
-                sleep 2
-              done
               mount -o subvol=/ /dev/mapper/${cfg_encrypt.encrypted-partition} /mnt
-              mount_result=''$?
-              echo "*** MOUNT RESULT ''$mount_result"
               btrfs subvolume list -o /mnt/${cfg_impermanence.root-subvol} | cut -f9 -d' ' |
               while read subvolume; do
                 echo "Deleting /$subvolume subvolume"
@@ -106,7 +99,6 @@ in
     ];
 
     environment = mkIf cfg_impermanence.enable {
-      etc.machine-id.source = "/persist/etc/machine-id";
       systemPackages =
         let
           # Running this will show what changed during boot to potentially use for persisting
@@ -144,9 +136,10 @@ in
             hideMounts = true ;
             directories = [
               "/root"                            # Root
-              ]  ++ cfg_impermanence.directories;
+              "/var/lib/nixos"                   # Persist UID and GID mappings
+            ]  ++ cfg_impermanence.directories;
             files = [
-              #"/etc/machine-id"
+              "/etc/machine-id"
             ] ++ cfg_impermanence.files;
           };
     };
@@ -162,9 +155,8 @@ in
     };
 
     host.filesystem.impermanence.directories = mkIf ((config.host.filesystem.impermanence.enable) && (config.networking.networkmanager.enable)) [
-      "/etc/NetworkManager"               # NetworkManager TODO Potentially should be its own module but at least it is limited in this config
+      "/etc/NetworkManager"              # NetworkManager TODO Potentially should be its own module but at least it is limited in this config
       "/var/lib/NetworkManager"           # NetworkManager
-      "/var/lib/nixos"                    # Persist unspecified uid/gid
     ];
 
     services = mkIf cfg_impermanence.enable {
