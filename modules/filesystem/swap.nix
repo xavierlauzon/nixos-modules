@@ -32,7 +32,7 @@ in
         description = "Location of Swapfile";
       };
       partition = mkOption {
-        default = null;
+        default = "disk/by-partlabel/swap";
         type = with types; str;
         example = "sda2";
         description = "Partition to be used for swap";
