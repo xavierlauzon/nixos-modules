@@ -107,6 +107,10 @@ in
         runtimeTime = "20s";                          # Hardware watchdog reboot after 20s
         rebootTime = "30s";                           # Force reboot when hangs after 30s. See https://utcc.utoronto.ca/~cks/space/blog/linux/SystemdShutdownWatchdog
       };
+      services = {
+        systemd-networkd.stopIfChanged = false; # Shortens network downtime when upgrading
+        systemd-resolved.stopIfChanged = false; # Fixes resolution failures during resolved upgrade
+      };
 
       sleep.extraConfig = ''
         AllowSuspend=no
