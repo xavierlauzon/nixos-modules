@@ -110,6 +110,12 @@ in
       services = {
         systemd-networkd.stopIfChanged = false; # Shortens network downtime when upgrading
         systemd-resolved.stopIfChanged = false; # Fixes resolution failures during resolved upgrade
+        nix-daemon.serviceConfig.OOMScoreAdjust = lib.mkDefault 250; # Favor killing nix builds over other services
+        nix-gc.serviceConfig = { # Reduce potential for nix-gc to affect perofmance of other services
+          CPUSchedulingPolicy = "batch";
+          IOSchedulingClass = "idle";
+          IOSchedulingPriority = 7;
+        };
       };
 
       sleep.extraConfig = ''
