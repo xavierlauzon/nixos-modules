@@ -28,7 +28,9 @@ in
     };
 
     fileSystems = {
-      "/".options = [ "subvol=root" "compress=zstd" "noatime"  ];
+      "/".options = if config.host.filesystem.impermanence.enable
+        then [ "subvol=root" "compress=zstd" "noatime" ]
+        else [ "subvol=root/active" "compress=zstd" "noatime" ];
       "/home".options = [ "subvol=home/active" "compress=zstd" "noatime"  ];
       "/home/.snapshots".options = [ "subvol=home/snapshots" "compress=zstd" "noatime"  ];
       "/nix".options = [ "subvol=nix" "compress=zstd" "noatime"  ];
