@@ -154,10 +154,16 @@ in
       };
     };
 
-    host.filesystem.impermanence.directories = mkIf ((config.host.filesystem.impermanence.enable) && (config.networking.networkmanager.enable)) [
-      "/etc/NetworkManager"              # NetworkManager TODO Potentially should be its own module but at least it is limited in this config
-      "/var/lib/NetworkManager"           # NetworkManager
-    ];
+    host.filesystem.impermanence.directories = mkIf cfg_impermanence.enable (
+      (optionals config.networking.networkmanager.enable [
+        "/etc/NetworkManager"              # NetworkManager
+        "/var/lib/NetworkManager"          # NetworkManager
+      ]) ++
+      (optionals config.host.feature.virtualization.rke2.enable [
+        "/etc/rancher"                     # RKE2 configuration
+        "/var/lib/rancher"                 # RKE2 data
+      ])
+    );
 
     services = mkIf cfg_impermanence.enable {
       btrbk = {
