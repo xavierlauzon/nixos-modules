@@ -46,7 +46,7 @@ in
       };
       nodeIP = mkOption {
         default = null;
-        type = types.str;
+        type = types.nullOr types.str;
         example = "192.168.1.1";
         description = ''
           IPv4/IPv6 addresses to advertise for this node.
@@ -221,6 +221,7 @@ in
           serverAddr = optionalString isJoiningCluster cfg.cluster.serverURL;
         }
         # Path configurations
+        # Defaults are handled upstream in the nixpkgs RKE2 service module. Options which are not defined will not be passed.
         // optionalAttrs (cfg.advanced.configPath != null) { configPath = cfg.advanced.configPath; }
         // optionalAttrs (cfg.advanced.dataDir != null) { dataDir = cfg.advanced.dataDir; }
         # Node identity configurations
