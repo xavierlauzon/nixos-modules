@@ -35,7 +35,7 @@ in
         '';
       };
       nodeName = mkOption {
-        default = cfg.network.dns.hostname;
+        default = config.host.network.dns.hostname;
         type = types.nullOr types.str;
         example = "node-1.example.com";
         description = ''
