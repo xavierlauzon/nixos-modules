@@ -226,13 +226,11 @@ in
         # Path configurations
         // optionalAttrs (cfg.advanced.configPath != null) { configPath = cfg.advanced.configPath; }
         // optionalAttrs (cfg.advanced.dataDir != null) { dataDir = cfg.advanced.dataDir; }
-        # Optional node identity configurations
-        // mapAttrs' (name: value: nameValuePair name (optional (value != null) [value])) {
-          nodeName = cfg.cluster.nodeName;
-          nodeIP = cfg.cluster.nodeIP;
-          nodeLabel = cfg.cluster.nodeLabel;
-          nodeTaint = cfg.cluster.nodeTaint;
-        }
+        # Node identity configurations
+        // optionalAttrs (cfg.cluster.nodeName != null) { nodeName = cfg.cluster.nodeName; }
+        // optionalAttrs (cfg.cluster.nodeIP != null) { nodeIP = cfg.cluster.nodeIP; }
+        // optionalAttrs (cfg.cluster.nodeLabel != null) { nodeLabel = cfg.cluster.nodeLabel; }
+        // optionalAttrs (cfg.cluster.nodeTaint != null) { nodeTaint = cfg.cluster.nodeTaint; }
         # Conditional features
         // optionalAttrs cfg.advanced.debug { debug = true; }
         // optionalAttrs (isServer && cfg.advanced.disable != []) { disable = cfg.advanced.disable; }
