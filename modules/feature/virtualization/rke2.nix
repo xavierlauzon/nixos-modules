@@ -15,6 +15,7 @@ in
     };
     cluster = {
       bootstrapMode = mkOption {
+        default = "agent";
         type = types.enum [ "initial" "server" "agent" ];
         description = ''
           Mode for bootstrapping the cluster:
