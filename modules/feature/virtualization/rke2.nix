@@ -3,9 +3,6 @@ with lib;
 
 let
   cfg = config.host.feature.virtualization.rke2;
-
-  kubectlPath = "${pkgs.kubectl}/bin/kubectl";
-  helmPath = "${pkgs.kubernetes-helm}/bin/helm";
 in
 {
   options.host.feature.virtualization.rke2 = {
