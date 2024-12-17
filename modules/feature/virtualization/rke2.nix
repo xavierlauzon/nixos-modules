@@ -4,10 +4,8 @@ with lib;
 let
   cfg = config.host.feature.virtualization.rke2;
 
-  # Define paths
   kubectlPath = "${pkgs.kubectl}/bin/kubectl";
   helmPath = "${pkgs.kubernetes-helm}/bin/helm";
-
 in
 {
   options.host.feature.virtualization.rke2 = {
@@ -26,15 +24,15 @@ in
         type = types.nullOr types.str;
         description = "URL of an existing server node to join (required for server and agent modes).";
       };
-      nodeName = mkOption {
-        default = null;
-        type = types.nullOr types.str;
-        description = "Node name override.";
-      };
-      defaultLabel = mkOption {
+      nodeLabel = mkOption {
         default = null;
         type = types.nullOr types.str;
         description = "Override default node label.";
+      };
+      nodeName = mkOption {
+        default = cfg.network.dns.hostname;
+        type = types.nullOr types.str;
+        description = "Node name override.";
       };
       nodeTaint = mkOption {
         default = null;
@@ -101,15 +99,10 @@ in
         type = types.bool;
         description = "Enable debug logging for RKE2.";
       };
-      serverConfig = mkOption {
+      extraConfig = mkOption {
         default = [];
         type = types.listOf types.str;
-        description = "Extra arguments for the RKE2 server.";
-      };
-      agentConfig = mkOption {
-        default = [];
-        type = types.listOf types.str;
-        description = "Extra arguments for the RKE2 agent.";
+        description = "Extra arguments for the RKE2 service.";
       };
       ipPools = mkOption {
         default = [];
@@ -166,22 +159,16 @@ in
       isInitialServer = cfg.cluster.bootstrapMode == "initial";
       isJoiningNode = cfg.cluster.bootstrapMode != "initial";
 
-      finalNodeName = cfg.cluster.nodeName or config.host.network.dns.hostname;
-
       # Update service configuration
       servicesRke2Options = {
         enable = true;
         role = role;
         debug = cfg.advanced.debug;
-        nodeName = finalNodeName;
-        nodeLabel = optionals (cfg.cluster.defaultLabel != null) [ cfg.cluster.defaultLabel ];
-        nodeTaint = optionals (isServer && cfg.cluster.nodeTaint != null)
-          [ cfg.cluster.nodeTaint ];
+        nodeName = cfg.cluster.nodeName;
+        nodeLabel = optionals (cfg.cluster.nodeLabel != null) [ cfg.cluster.nodeLabel ];
+        nodeTaint = optionals (cfg.cluster.nodeTaint != null) [ cfg.cluster.nodeTaint ];
         nodeIP = cfg.cluster.nodeIP;
-
-        tokenFile = if isJoiningNode then
-          (if role == "agent" then config.sops.secrets.agentToken.path else config.sops.secrets.clusterToken.path)
-        else null;
+        tokenFile = config.sops.secrets.clusterToken.path;
         serverAddr = if isJoiningNode then cfg.cluster.serverURL else "";
 
         extraFlags = [
@@ -199,7 +186,7 @@ in
         (optionals (isServer && cfg.security.tls.san != []) (
           map (san: "--tls-san=${san}") cfg.security.tls.san
         )) ++
-        (if role == "server" then cfg.advanced.serverConfig else cfg.advanced.agentConfig);
+        cfg.advanced.extraConfig;
       };
 
     in {
@@ -232,27 +219,13 @@ in
     }
   );
 }
-# TODO
-# 1. external etcd support (maybe? if rke2 implements it just as reliably then no)
-# 2. true multi-master support
-# 3. fix tls certs
-# 4. Test with multiple master nodes and workers
-
-
+# TODO add option for external load balancer
 
 # Overview:
 # This module deploys an RKE2 cluster on NixOS with support for:
 # - Multi-master HA configuration
 # - Worker nodes
-# - Sops-nix secrets for cluster token and TLS
-# - Cert-Manager integration
-# - Rancher UI deployment
-#
-# Key Features:
-# - Modular configuration with logical grouping (cluster, networking, rancher, etc.)
-# - Automatic HA etcd clustering with --cluster-init
-# - Conditional Helm charts installation with idempotency
-# - Comprehensive TLS management (sops-encrypted or Let's Encrypt)
+# - Sops-nix secrets for cluster token
 #
 # Usage Steps:
 # 1. Generate cluster token:
