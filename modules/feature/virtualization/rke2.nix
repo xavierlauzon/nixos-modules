@@ -223,12 +223,10 @@ in
           tokenFile = config.sops.secrets.clusterToken.path;
           serverAddr = optionalString isJoiningCluster cfg.cluster.serverURL;
         }
-        # Optional node configuration
-        // mapAttrs' (name: value: nameValuePair name (optional (value != null) value)) {
-          configPath = cfg.advanced.configPath;
-          dataDir = cfg.advanced.dataDir;
-        }
-        # Optional node identity (as lists)
+        # Path configurations
+        // optionalAttrs (cfg.advanced.configPath != null) { configPath = cfg.advanced.configPath; }
+        // optionalAttrs (cfg.advanced.dataDir != null) { dataDir = cfg.advanced.dataDir; }
+        # Optional node identity configurations
         // mapAttrs' (name: value: nameValuePair name (optional (value != null) [value])) {
           nodeName = cfg.cluster.nodeName;
           nodeIP = cfg.cluster.nodeIP;
@@ -241,7 +239,7 @@ in
         // {
           # Flags configuration
           extraFlags = concatLists [
-            # Server-only networking configuration
+            # Server-only cluster networking configuration
             (optionals isServer [
               "--cluster-cidr=${cfg.networking.clusterCidr}"
               "--service-cidr=${cfg.networking.serviceCidr}"
@@ -288,8 +286,6 @@ in
     }
   );
 }
-
-# TODO add option for external load balancer
 
 # Overview:
 # This module deploys an RKE2 cluster on NixOS with support for:
