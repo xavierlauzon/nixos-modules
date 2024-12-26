@@ -49,7 +49,7 @@ in
             timestamp_format = "long";
             preserve_day_of_week = "sunday" ;
             preserve_hour_of_day = "0" ;
-            snapshot_preserve = "48h 10d 4w 12m 10y" ;
+            snapshot_preserve = "24h 7d" ;
             snapshot_preserve_min = "2d";
             volume."/home" = {
               snapshot_create = "always";
