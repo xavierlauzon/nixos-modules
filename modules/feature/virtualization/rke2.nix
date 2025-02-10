@@ -110,6 +110,14 @@ in
           All services and pods will be assigned DNS names under this domain.
         '';
       };
+      ingressController = mkOption {
+        default = "nginx";
+        type = types.enum [ "traefik" "ingress-nginx" ];
+        description = ''
+          Ingress controller to deploy with RKE2.
+          Options: "ingress-nginx" or "traefik"
+        '';
+      };
     };
     security = {
       tls = {
@@ -242,6 +250,7 @@ in
               "--service-cidr=${cfg.networking.serviceCidr}"
               "--cluster-dns=${cfg.networking.clusterDns}"
               "--cluster-domain=${cfg.networking.clusterDomain}"
+              "--ingress-controller=${cfg.networking.ingressController}"
             ])
             # Registry configuration
             (optional (cfg.security.registry.defaultRegistry != null)
