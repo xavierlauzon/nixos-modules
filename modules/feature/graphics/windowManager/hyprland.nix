@@ -9,25 +9,17 @@ in
     programs = {
       hyprland = {
         enable = mkDefault true;
+        xwayland.enable = mkDefault true;
       };
     };
 
     xdg.portal = {
       enable = true;
-      xdgOpenUsePortal = true;
       config = {
         common = {
-          default = ["gtk"];
           "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
         };
-        hyprland = {
-          default = ["gtk" "hyprland"];
-        };
       };
-      extraPortals = with pkgs; [
-        xdg-desktop-portal-gtk
-        xdg-desktop-portal-hyprland
-      ];
     };
   };
 }
