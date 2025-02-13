@@ -105,12 +105,6 @@ in
     boot.initrd =  {
       availableKernelModules = mkIf cfg.ssh.enable cfg.ssh.networkModule;
       luks.forceLuksSupportInInitrd = mkIf cfg.ssh.enable mkForce true;
-      luks.devices = {
-          "pool0_0" = {
-             allowDiscards = true;
-             bypassWorkqueues = true;
-          };
-      };
       network = mkIf cfg.ssh.enable {
         enable = mkForce true;
         ssh = {
