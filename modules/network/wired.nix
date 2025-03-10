@@ -27,12 +27,12 @@ in {
                 description = "IP address configuration type.";
               };
               ip = mkOption {
-                type = types.str;
+                type = types.nullOr types.str;
                 default = null;
                 description = "IPv4 address with subnet mask (e.g., '192.168.1.10/24').";
               };
               gateway = mkOption {
-                type = types.str;
+                type = types.nullOr types.str;
                 default = null;
                 description = "Gateway IP address.";
               };
@@ -66,12 +66,12 @@ in {
               description = "IP address configuration type.";
             };
             ip = mkOption {
-              type = types.str;
+              type = types.nullOr types.str;
               default = null;
               description = "IPv4 address with subnet mask.";
             };
             gateway = mkOption {
-              type = types.str;
+              type = types.nullOr types.str;
               default = null;
               description = "Gateway IP address.";
             };
