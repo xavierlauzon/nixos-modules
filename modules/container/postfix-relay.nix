@@ -73,7 +73,7 @@ in
         "CONTAINER_ENABLE_LOGSHIPPING" = cfg.logship;
 
         "MODE" = "RELAY";
-        "SERVER_NAME" = "${hostname}.${config.host.network.domainname}";
+        "SERVER_NAME" = "${hostname}.${config.host.network.dns.domain}";
 
         #"ACCEPTED_NETWORKS" = "172.16.0.0/12";   # hosts/common/secrets/container-postfix-relay.env
 
