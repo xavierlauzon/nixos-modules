@@ -8,7 +8,7 @@ in {
   options = {
     host.network = {
       wired = {
-        enable = mkEnableOption "wired network configuration";
+        enable = mkEnableOption "Wired network configuration";
         interfaces = mkOption {
           type = types.attrsOf (types.submodule {
             options = {
@@ -48,41 +48,30 @@ in {
                 '';
                 example = "aa:bb:cc:dd:ee:ff";
               };
-              customName = mkOption {
-                type = types.nullOr types.str;
-                default = null;
-                description = ''
-                  Optional custom name for the interface.
-                  By default, systemd-networkd will assign names automatically.
-                  Use this option to set a predictable, custom name.
-                '';
-                example = "internet0";
-              };
             };
           });
           default = { };
           description = ''
             Configuration for wired network interfaces.
             Define each interface by a logical name and provide its configuration.
+            The attribute name will be used as the interface name.
           '';
           example = literalExpression ''
             {
-              primary = {
+              eth0 = {
                 mac = "00:11:22:33:44:55";
                 type = "static";
                 ip = "192.168.1.50/24";
                 gateway = "192.168.1.1";
               };
-              secondary = {
+              internet0 = {
                 mac = "aa:bb:cc:dd:ee:ff";
                 type = "dynamic";
-                customName = "internet0";
               };
             }
           '';
         };
       };
-
       bridges = mkOption {
         type = types.attrsOf (types.submodule {
           options = {
@@ -440,8 +429,8 @@ in {
               value = recursiveUpdate
                 (makeMacMatchConfig ifData.value.mac)
                 (makeStaticNetworkConfig ifData.value) // {
-                  linkConfig = optionalAttrs (ifData.value.customName != null) {
-                    Name = ifData.value.customName;
+                  linkConfig = {
+                    Name = ifData.name; # Use attribute name as interface name
                   };
                 };
             }) unbridgedInterfaces);
