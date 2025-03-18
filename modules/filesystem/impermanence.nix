@@ -72,7 +72,9 @@ in
             ];
             after = [
               "systemd-cryptsetup@${cfg_encrypt.encrypted-partition}.service"
-            ];
+            ] ++ (optionals config.host.hardware.raid.enable [
+              "systemd-cryptsetup@pool0_1.service"
+            ]);
             before = [
               "sysroot.mount"
             ];
