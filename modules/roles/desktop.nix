@@ -57,9 +57,9 @@ in
       hardware = {
         android.enable = mkDefault true;
         bluetooth.enable = mkDefault true;    # Most wireless cards have bluetooth radios
-        printing.enable = mkDefault true;     # If we don't have access to a physical printer we should be able to remotely print
+        printing.enable = mkDefault false;     # If we don't have access to a physical printer we should be able to remotely print
         raid.enable = mkDefault false;
-        scanning.enable = mkDefault true;
+        scanning.enable = mkDefault false;
         sound.enable = mkDefault true;        #
         webcam.enable = mkDefault true;       # Age of video conferencing
         wireless.enable = mkDefault true;     # Most systems have some sort of 802.11

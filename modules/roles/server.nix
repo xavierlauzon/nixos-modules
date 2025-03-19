@@ -74,6 +74,7 @@ in
       network = {
         firewall.fail2ban.enable = mkDefault true;
         wired.enable = mkDefault true;
+        wired.dhcp.enable = mkDefault false;
       };
       service = {
         logrotate.enable = mkDefault true;
@@ -85,7 +86,6 @@ in
     };
 
     networking = {
-      dhcpcd.enable = mkDefault false;                # Let's stay static
       enableIPv6 = mkDefault false;                   # See you in 2040
       firewall = {
         enable = mkDefault true;                      # Make sure firewall is enabled
@@ -97,8 +97,6 @@ in
       networkmanager= {
         enable = mkDefault false;                     # systemd-networkd is cleaner and built in
       };
-      useDHCP = mkDefault false;
-      useNetworkd = mkDefault false;
     };
 
     systemd = {

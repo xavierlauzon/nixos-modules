@@ -3,11 +3,11 @@
 with lib;
 {
   imports = [
-    ./desktop
+    ./desktop.nix
     ./laptop
-    ./minimal
-    ./server
-    ./vm
+    ./minimal.nix
+    ./server.nix
+    ./vm.nix
   ];
 
   options = {
