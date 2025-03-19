@@ -9,7 +9,6 @@ with lib;
     ./cpu
     ./gpu
     ./keyboard.nix
-    ./monitors.nix
     ./printing.nix
     ./raid.nix
     ./scanner.nix

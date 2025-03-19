@@ -1,19 +1,17 @@
 { config, inputs, lib, pkgs, specialArgs, ... }:
 with lib;
 let
-  inherit (specialArgs) kioskUsername kioskURL;
-
   graphics = config.host.feature.graphics;
 in {
   config = mkIf (graphics.enable && graphics.backend == "wayland") {
     environment.pathsToLink = [ "/libexec" ];
 
-    programs = mkIf (config.host.role != "kiosk") {
+    programs = {
       dconf.enable = mkDefault true;
       seahorse.enable = mkDefault true;
     };
 
-    security = mkIf (config.host.role != "kiosk") {
+    security = {
       pam = {
         services.gdm.enableGnomeKeyring = mkDefault true;
         services.swaylock.text = mkDefault ''

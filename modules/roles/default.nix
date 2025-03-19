@@ -4,7 +4,6 @@ with lib;
 {
   imports = [
     ./desktop
-    ./kiosk
     ./laptop
     ./minimal
     ./server
@@ -15,8 +14,6 @@ with lib;
     host.role = mkOption {
       type = types.enum [
         "desktop"   # Typical Workstation
-        "hybrid"    # A mixture of a laptop or desktop - Special purpose
-        "kiosk"     # Does one thing and one thing well
         "laptop"    # Workstation with differnet power profiles
         "minimal"   # Bare bones
         "server"    #
