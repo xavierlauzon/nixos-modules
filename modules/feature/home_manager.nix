@@ -24,5 +24,6 @@ in
     ];
 
     home-manager.extraSpecialArgs = { inherit inputs outputs; };
+    home-manager.useGlobalPkgs = true;
   };
 }
