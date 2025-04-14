@@ -275,13 +275,102 @@ let
             If this option is set to false, the container has to be started on-demand via its service.
           '';
         };
+
+        publishMode = mkOption {
+          type = types.enum [ "standard" "public" "zerotier" ];
+          default = "standard";
+          description = ''
+            Determines how port publishing should be handled:
+            - standard: Use Docker's default port publishing mechanism
+            - public: Bind ports only to the public network interfaces (interfaces with "public" in name)
+            - zerotier: Bind ports only to ZeroTier network interfaces (interfaces with "zt" prefix)
+          '';
+        };
       };
     };
 
   isValidLogin = login: login.username != null && login.passwordFile != null && login.registry != null;
 
+  portBindingHelpers = rec {
+    publicIP = pkgs.writeShellScript "docker-get-public-ip" ''
+      PUBLIC_IFS=$(${pkgs.iproute2}/bin/ip -o link show | ${pkgs.gnugrep}/bin/grep -i "public" | ${pkgs.gawk}/bin/awk -F': ' '{print $2}' | ${pkgs.gnused}/bin/sed 's/@.*//g')
+      if [ -z "$PUBLIC_IFS" ]; then
+        echo "No public network interfaces found. Cannot bind ports." >&2
+        exit 1
+      fi
+      PUBLIC_IP=$(${pkgs.iproute2}/bin/ip -4 addr show | ${pkgs.gnugrep}/bin/grep -i -F "$PUBLIC_IFS" | ${pkgs.gnugrep}/bin/grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n 1)
+      if [ -z "$PUBLIC_IP" ]; then
+        echo "No IP address found on public interface. Cannot bind ports." >&2
+        exit 1
+      fi
+      echo "$PUBLIC_IP"
+    '';
+    zerotierIPs = pkgs.writeShellScript "docker-get-zerotier-ips" ''
+      ZT_IFS=$(${pkgs.iproute2}/bin/ip -o link show | ${pkgs.gnugrep}/bin/grep -P "zt[a-z0-9]+" | ${pkgs.gawk}/bin/awk -F': ' '{print $2}' | ${pkgs.gnused}/bin/sed 's/@.*//g')
+      if [ -z "$ZT_IFS" ]; then
+        echo "No ZeroTier network interfaces found. Cannot bind ports." >&2
+        exit 1
+      fi
+      ZT_IPS=$(${pkgs.iproute2}/bin/ip -4 addr show | ${pkgs.gnugrep}/bin/grep -F "$ZT_IFS" | ${pkgs.gnugrep}/bin/grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+      if [ -z "$ZT_IPS" ]; then
+        echo "No IP addresses found on ZeroTier interfaces. Cannot bind ports." >&2
+        exit 1
+      fi
+      echo "$ZT_IPS"
+    '';
+    portBindings = pkgs.writeShellScript "docker-port-bindings" ''
+      PUBLISH_MODE="$1"
+      shift
+      case "$PUBLISH_MODE" in
+        public)
+          PUBLIC_IP=$(${publicIP})
+          for PORT in "$@"; do
+            echo -n " -p $PUBLIC_IP:$PORT"
+          done
+          ;;
+        zerotier)
+          readarray -t ZT_IPS < <(${zerotierIPs})
+          for ZT_IP in "''${ZT_IPS[@]}"; do
+            for PORT in "$@"; do
+              echo -n " -p $ZT_IP:$PORT"
+            done
+          done
+          ;;
+        *)
+          for PORT in "$@"; do
+            echo -n " -p $PORT"
+          done
+          ;;
+      esac
+    '';
+  };
+
   mkService = name: container: let
     mkAfter = map (x: "docker-${x}.service") container.dependsOn;
+
+    containerVariables = pkgs.writeShellScript "docker-create-${name}" ''
+      PORT_ARGS=""
+      if [ ${toString (length container.ports)} -gt 0 ]; then
+        PORT_ARGS=$(${portBindingHelpers.portBindings} ${container.publishMode} ${concatStringsSep " " container.ports})
+      fi
+
+      ${pkgs.docker}/bin/docker create \
+        --rm \
+        --name=${name} \
+        --log-driver=${container.log-driver} \
+        ${optionalString (container.entrypoint != null) "--entrypoint=${escapeShellArg container.entrypoint}"} \
+        ${concatStringsSep " \\\n  " (mapAttrsToList (k: v: "-e ${escapeShellArg k}=${escapeShellArg v}") container.environment)} \
+        ${concatStringsSep " \\\n  " (map (f: "--env-file ${escapeShellArg f}") container.environmentFiles)} \
+        $PORT_ARGS \
+        ${optionalString (container.user != null) "-u ${escapeShellArg container.user}"} \
+        ${concatStringsSep " \\\n  " (map (v: "-v ${escapeShellArg v}") container.volumes)} \
+        ${optionalString (container.workdir != null) "-w ${escapeShellArg container.workdir}"} \
+        ${optionalString (container.networks != []) "--network=${escapeShellArg (builtins.head container.networks)}"} \
+        ${concatStringsSep " \\\n  " (mapAttrsToList (k: v: "-l ${escapeShellArg k}=${escapeShellArg v}") container.labels)} \
+        ${concatStringsSep " " (map escapeShellArg container.extraOptions)} \
+        ${container.image} \
+        ${concatStringsSep " " (map escapeShellArg container.cmd)}
+    '';
   in
     rec {
       wantedBy = [] ++ optional (container.autoStart) "multi-user.target";
@@ -298,10 +387,9 @@ let
         ExecStartPre = [
           "-${pkgs.docker}/bin/docker rm -f ${name}"
         ] ++ (
-          optional (container.imageFile != null)
-            [ "${pkgs.docker}/bin/docker load -i ${container.imageFile}" ]
+        optional (container.imageFile != null)
+          [ "${pkgs.docker}/bin/docker load -i ${container.imageFile}" ]
         ) ++ (
-
         optional (isValidLogin container.login)
           [ "cat ${container.login.passwordFile} | \
               ${pkgs.docker}/bin/docker login \
@@ -312,28 +400,7 @@ let
         optional ((container.imageFile == null) && (container.pullonStart))
           [ "${pkgs.docker}/bin/docker pull ${container.image}" ]
         ) ++ [
-          (
-            concatStringsSep " \\\n  " (
-              [
-                "${pkgs.docker}/bin/docker create"
-                "--rm"
-                "--name=${name}"
-                "--log-driver=${container.log-driver}"
-              ] ++ optional (container.entrypoint != null)
-                "--entrypoint=${escapeShellArg container.entrypoint}"
-              ++ (mapAttrsToList (k: v: "-e ${escapeShellArg k}=${escapeShellArg v}") container.environment)
-              ++ map (f: "--env-file ${escapeShellArg f}") container.environmentFiles
-              ++ map (p: "-p ${escapeShellArg p}") container.ports
-              ++ optional (container.user != null) "-u ${escapeShellArg container.user}"
-              ++ map (v: "-v ${escapeShellArg v}") container.volumes
-              ++ optional (container.workdir != null) "-w ${escapeShellArg container.workdir}"
-              ++ optional (container.networks != []) "--network=${escapeShellArg (builtins.head container.networks)}"
-              ++ (mapAttrsToList (k: v: "-l ${escapeShellArg k}=${escapeShellArg v}") container.labels)
-              ++ map escapeShellArg container.extraOptions
-              ++ [ container.image ]
-              ++ map escapeShellArg container.cmd
-            )
-          )
+        containerVariables
         ] ++ map (n: "${pkgs.docker}/bin/docker network connect ${escapeShellArg n} ${name}") (drop 1 container.networks);
 
         ExecStop = ''${pkgs.bash}/bin/sh -c "[ $SERVICE_RESULT = success ] || ${pkgs.docker}/bin/docker stop ${name}"'';
@@ -370,6 +437,11 @@ in
         type = with types; bool;
         description = "Enables tools and daemon for containerization";
       };
+      bridge_loopback = mkOption {
+        default = true;
+        type = with types; bool;
+        description = "Allow for NAT Loopback from br-* interfaces to allow resolving host";
+      };
     };
     host.feature.virtualization.docker.containers = mkOption {
       default = {};
@@ -401,6 +473,11 @@ in
         docker_container_manager.enable = true;
       };
     };
+
+
+    networking.firewall.trustedInterfaces = mkIf (cfg.bridge_loopback) [
+      "br-+"
+    ];
 
     programs = {
       bash = {
