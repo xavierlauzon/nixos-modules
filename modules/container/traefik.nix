@@ -5,7 +5,7 @@ let
   container_description = "Enables reverse proxy container";
   container_image_registry = "docker.io";
   container_image_name = "tiredofit/traefik";
-  container_image_tag = "3.1";
+  container_image_tag = "3.3";
   tcc_container_name = "cloudflare-companion";
   tcc_container_description = "Enables ability to create CNAMEs with traefik container";
   tcc_container_image_registry = "docker.io";
@@ -107,6 +107,7 @@ in
   config = mkIf cfg.enable {
     host.feature.virtualization.docker.containers."${container_name}" = {
       image = "${cfg.image.name}:${cfg.image.tag}";
+      publishMode = "public";
       ports = [
         "80:80"
         "443:443"
@@ -117,35 +118,32 @@ in
         "/var/local/data/_system/${container_name}/logs:/data/logs"
       ];
       environment = {
-        "TIMEZONE" = "America/Vancouver";
+        "TIMEZONE" = "America/Toronto";
         "CONTAINER_NAME" = "${hostname}-${container_name}";
         "CONTAINER_ENABLE_MONITORING" = cfg.monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = cfg.logship;
 
+        "DOCKER_CONSTRAINTS" = "Label(`traefik.constraint`,`proxy-public`)";
         "DOCKER_ENDPOINT" = "http://socket-proxy:2375";
-        "LOG_LEVEL" = "WARN";
+        "LOG_TYPE" = "CONSOLE";
+        "LOG_LEVEL" = "DEBUG";
         "ACCESS_LOG_TYPE" = "FILE";
-        "LOG_TYPE" = "FILE";
         "TRAEFIK_USER" = "traefik";
         "LETSENCRYPT_CHALLENGE" = "DNS";
         "LETSENCRYPT_DNS_PROVIDER" = "cloudflare";
+        "LETSENCRYPT_DNS_RESOLVER" = "1.1.1.1:53,1.0.0.1:53";
 
-        #"LETSENCRYPT_EMAIL" = "common_env";                                            # hosts/common/secrets/container-traefik.env
-        #"CF_API_EMAIL" = "1234567890";                                                 # hosts/common/secrets/container-traefik.env
-        #"CF_API_KEY" = "1234567890";                                                   # hosts/common/secrets/container-traefik.env
-        "DASHBOARD_HOSTNAME" = "${hostname}.vpn.${config.host.network.domainname}";     # hosts/common/secrets/container-traefik.env
+        "ENABLE_DASHBOARD" = "FALSE";
+        "ENABLE_API" = "FALSE";
       };
       environmentFiles = [
         config.sops.secrets."common-container-${container_name}".path
       ];
       extraOptions = [
-        "--hostname=${hostname}.vpn.${config.host.network.domainname}"
-        "--cpus=0.5"
-        "--memory=256M"
+        "--hostname=${container_name}.${hostname}.vpn.${config.host.network.dns.domain}"
         "--network-alias=${hostname}-${container_name}"
       ];
       networks = [
-        "services"      # Make this the first network
         "proxy"
         "socket-proxy"
       ];
@@ -154,6 +152,7 @@ in
       login = {
         registry = cfg.image.registry.host;
       };
+      pullonStart = config.host.container."${container_name}".image.update;
     };
 
     sops.secrets = {
@@ -190,7 +189,7 @@ in
 
         "DOCKER_HOST" = "http://socket-proxy:2375";
         "TRAEFIK_VERSION" = "2";
-        "TARGET_DOMAIN" = "${hostname}.${config.host.network.domainname}";
+        "TARGET_DOMAIN" = "${hostname}.${config.host.network.dns.domain}";
 
         #"CF_EMAIL" = "email@example.com";  # hosts/common/secrets/container-traefik-cloudflare-companion.env
         #"CF_TOKEN" = "1234567890";         # hosts/common/secrets/container-traefik-cloudflare-companion.env
@@ -203,7 +202,7 @@ in
         config.sops.secrets."host-container-${tcc_container_name}".path
       ];
       extraOptions = [
-        "--hostname=${hostname}.vpn.${config.host.network.domainname}"
+        "--hostname=${hostname}.vpn.${config.host.network.dns.domain}"
         "--cpus=0.25"
         "--memory=128M"
         "--network-alias=${hostname}-${tcc_container_name}"
