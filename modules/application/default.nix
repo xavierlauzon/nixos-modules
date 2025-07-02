@@ -25,11 +25,13 @@ with lib;
     ./mtr.nix
     ./nano.nix
     ./ncdu.nix
+    ./openssl.nix
     ./pciutils.nix
     ./psmisc.nix
     ./rsync.nix
     ./strace.nix
     ./tmux.nix
+    ./tree.nix
     ./wget.nix
   ];
 }
