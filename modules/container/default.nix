@@ -11,11 +11,9 @@ with lib;
     ./restic.nix
     ./s3ql.nix
     ./socket-proxy.nix
-    ./tinc.nix
     ./traefik-internal.nix
     ./traefik.nix
     ./unbound.nix
     ./zabbix-proxy.nix
-    #./zerotier.nix
   ];
 }
