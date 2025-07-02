@@ -6,6 +6,5 @@ with lib;
     ./dns.nix
     ./firewall
     ./vpn
-    ./wired.nix
   ];
 }
