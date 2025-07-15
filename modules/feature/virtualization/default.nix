@@ -2,7 +2,7 @@
 with lib;
 {
   imports = [
-    ./docker.nix
+    ./docker
     ./flatpak.nix
     ./rke2.nix
     ./virtd.nix

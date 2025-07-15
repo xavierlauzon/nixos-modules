@@ -90,7 +90,7 @@ in
 
       resources = {
         memory = {
-          max = mkDefault "1G";
+          max = mkDefault "4G";
         };
       };
 
@@ -126,8 +126,8 @@ in
       environment = {
         "TIMEZONE" = mkDefault config.time.timeZone;
         "CONTAINER_NAME" = mkDefault "${hostname}-${container_name}";
-        "CONTAINER_ENABLE_MONITORING" = toString cfg.monitor;
-        "CONTAINER_ENABLE_LOGSHIPPING" = toString cfg.logship;
+        "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
+        "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
 
         "MODE" = mkDefault "BACKUP";
       };
@@ -140,6 +140,10 @@ in
 
       networking = {
         networks = [ "services" ];
+        aliases = {
+          default = mkDefault true;
+          extra = mkDefault [ ];
+        };
       };
     };
   };

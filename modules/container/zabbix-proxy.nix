@@ -158,8 +158,8 @@ in
       environment = {
         "TIMEZONE" = mkDefault config.time.timeZone;
         "CONTAINER_NAME" = mkDefault "${hostname}-${container_name}";
-        "CONTAINER_ENABLE_MONITORING" = toString cfg.monitor;
-        "CONTAINER_ENABLE_LOGSHIPPING" = toString cfg.logship;
+        "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
+        "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
 
         "ZABBIX_PROXY_HOSTNAME" = mkDefault "${hostname}-${container_name}";
         "ZABBIX_PROXY_LISTEN_PORT" = toString cfg.ports.proxy.container;
@@ -172,8 +172,14 @@ in
       };
 
       networking = {
-        networks = [ "services" ];
-        dns = "172.19.153.53";  # Use unbound
+        networks = [
+          "services"
+        ];
+        dns = mkIf config.host.container.unbound.enable (config.host.feature.virtualization.docker.containers.unbound.networking.ip);
+        aliases = {
+          default = mkDefault true;
+          extra = mkDefault [ ];
+        };
       };
     };
   };

@@ -188,8 +188,7 @@ in
           }
         ] else []);
 
-      hostname = mkDefault "${config.host.network.hostname}.${config.host.network.dns.domain
-}";
+      hostname = mkDefault "${config.host.network.hostname}.${config.host.network.domainname}";
 
       volumes = [
         {
@@ -234,8 +233,8 @@ in
       environment = {
         "TIMEZONE" = mkDefault config.time.timeZone;
         "CONTAINER_NAME" = mkDefault "${hostname}-${container_name}";
-        "CONTAINER_ENABLE_MONITORING" = toString cfg.monitor;
-        "CONTAINER_ENABLE_LOGSHIPPING" = toString cfg.logship;
+        "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
+        "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
       };
 
       secrets = {
@@ -246,6 +245,10 @@ in
 
       networking = {
         networks = [ "services" ];
+        aliases = {
+          default = mkDefault true;
+          extra = mkDefault [ ];
+        };
       };
     };
   };

@@ -4,6 +4,7 @@ with lib;
 {
   imports = [
     ./clamav.nix
+    ./coredns.nix
     ./fluentbit.nix
     ./llng-handler.nix
     ./openldap.nix

@@ -213,8 +213,8 @@ in
       environment = {
         "TIMEZONE" = mkDefault config.time.timeZone;
         "CONTAINER_NAME" = mkDefault "${hostname}-${container_name}";
-        "CONTAINER_ENABLE_MONITORING" = toString cfg.monitor;
-        "CONTAINER_ENABLE_LOGSHIPPING" = toString cfg.logship;
+        "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
+        "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
 
         "LISTEN_PORT" = toString cfg.ports.dns.container;
         "ENABLE_IPV6" = mkDefault "FALSE";
@@ -231,11 +231,13 @@ in
           "services"
         ];
         ip = mkDefault "172.19.153.53";  # Fixed IP for DNS
+        aliases = {
+          default = mkDefault true;
+          extra = mkDefault [
+            "${container_name}-app"
+          ];
+        };
       };
-
-      extraOptions = [
-        "--network-alias=${container_name}-app"
-      ];
     };
   };
 }

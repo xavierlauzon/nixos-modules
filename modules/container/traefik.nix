@@ -201,8 +201,7 @@ in
         };
       };
 
-      hostname = mkDefault "${hostname}.vpn.${config.host.network.dns.domain
-}";
+      hostname = mkDefault "${hostname}.vpn.${config.host.network.domainname}";
 
       volumes = [
         {
@@ -229,8 +228,8 @@ in
       environment = {
         "TIMEZONE" = mkDefault config.time.timeZone;
         "CONTAINER_NAME" = mkDefault "${hostname}-${container_name}";
-        "CONTAINER_ENABLE_MONITORING" = toString cfg.monitor;
-        "CONTAINER_ENABLE_LOGSHIPPING" = toString cfg.logship;
+        "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
+        "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
 
         "HTTP_LISTEN_PORT" = toString cfg.ports.http.container;
         "HTTPS_LISTEN_PORT" = toString cfg.ports.https.container;
@@ -244,8 +243,7 @@ in
         "LETSENCRYPT_CHALLENGE" = mkDefault "DNS";
         "LETSENCRYPT_DNS_PROVIDER" = mkDefault "cloudflare";
         "DOCKER_CONSTRAINTS" = cfg.docker.constraint;
-        "DASHBOARD_HOSTNAME" = mkDefault "${hostname}.vpn.${config.host.network.dns.domain
-}";
+        "DASHBOARD_HOSTNAME" = mkDefault "${hostname}.vpn.${config.host.network.domainname}";
       };
 
       labels = {
@@ -294,7 +292,12 @@ in
           "proxy"
           "socket-proxy"
         ];
+        aliases = {
+          default = mkDefault true;
+          extra = mkDefault [ ];
+        };
       };
+
     };
   };
 }

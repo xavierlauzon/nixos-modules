@@ -111,8 +111,8 @@ in
         '';
       };
       ingressController = mkOption {
-        default = "nginx";
-        type = types.enum [ "traefik" "ingress-nginx" ];
+        default = "none";
+        type = types.enum [ "none" "traefik" "ingress-nginx" ];
         description = ''
           Ingress controller to deploy with RKE2.
           Options: "ingress-nginx" or "traefik"
@@ -225,12 +225,13 @@ in
         # Required base configuration
         {
           enable = true;
+          package = pkgs.rke2_1_32;
           role = role;
-          tokenFile = config.sops.secrets.clusterToken.path;
           serverAddr = optionalString isJoiningCluster cfg.cluster.serverURL;
         }
+        // optionalAttrs (!isInitialServer) { tokenFile = config.sops.secrets.token.path; }
         # Path configurations
-        # Defaults are handled upstream in the nixpkgs RKE2 service module. Options which are not defined will not be passed.
+        # Defaults are handled upstream in the nixpkgs RKE2 service module.
         // optionalAttrs (cfg.advanced.configPath != null) { configPath = cfg.advanced.configPath; }
         // optionalAttrs (cfg.advanced.dataDir != null) { dataDir = cfg.advanced.dataDir; }
         # Node identity configurations
@@ -250,7 +251,6 @@ in
               "--service-cidr=${cfg.networking.serviceCidr}"
               "--cluster-dns=${cfg.networking.clusterDns}"
               "--cluster-domain=${cfg.networking.clusterDomain}"
-              "--ingress-controller=${cfg.networking.ingressController}"
             ])
             # Registry configuration
             (optional (cfg.security.registry.defaultRegistry != null)
@@ -280,48 +280,22 @@ in
       environment.systemPackages = [
         pkgs.kubernetes-helm
         pkgs.kubectl
+        pkgs.nfs-utils # longhorn
+        pkgs.openiscsi # longhorn
       ];
 
-      services.rke2 = servicesRke2Options;
-
-      sops.secrets = {
-        clusterToken = {
-          sopsFile = "${config.host.configDir}/hosts/common/secrets/rke2/clusterToken.yaml";
+      services = {
+        rke2 = servicesRke2Options;
+        openiscsi = { # longhorn
+          enable = true;
+          name = "${config.host.network.dns.hostname}-initiatorhost";
+        };
+      };
+      sops.secrets = mkIf (!isInitialServer) {
+        token = {
+          sopsFile = "${config.host.configDir}/hosts/${config.host.network.dns.hostname}/secrets/rke2/token.yaml";
         };
       };
     }
   );
 }
-
-# Overview:
-# This module deploys an RKE2 cluster on NixOS with support for:
-# - Multi-master HA configuration
-# - Worker nodes
-# - Sops-nix secrets for cluster tokens
-#
-# Note: Initial cluster formation & server/agent registration may take up to 15 minutes.
-#
-# Usage Steps:
-# 1. Generate cluster token:
-#    openssl rand -hex 16 > token.txt
-#    echo "data: \"$(cat token.txt)\"" > clusterToken.yaml
-#    sops --encrypt --in-place clusterToken.yaml
-#
-# 2. Initial Server Node:
-#    host.feature.virtualization.rke2.enable = true;
-#    host.feature.virtualization.rke2.cluster.bootstrapMode = "initial";
-#
-# 3. Additional Server Nodes:
-#    host.feature.virtualization.rke2.enable = true;
-#    host.feature.virtualization.rke2.cluster.bootstrapMode = "server";
-#    host.feature.virtualization.rke2.cluster.serverURL = "https://<initial-server-ip>:9345";
-#
-# 4. Agent Nodes (Workers):
-#    host.feature.virtualization.rke2.enable = true;
-#    host.feature.virtualization.rke2.cluster.bootstrapMode = "agent";
-#    host.feature.virtualization.rke2.cluster.serverURL = "https://<server-ip>:9345";
-#
-# Verification:
-# - Check nodes: sudo rke2 kubectl get nodes
-# - Check pods: sudo rke2 kubectl get pods -A
-# - Ensure all nodes are in Ready state

@@ -1,10 +1,10 @@
 {config, lib, pkgs, ...}:
 
 let
-  container_name = "llng-handler";
-  container_description = "Enables LemonLDAP-NG authentication handler container";
+  container_name = "coredns";
+  container_description = "Enables DNS Resolution";
   container_image_registry = "docker.io";
-  container_image_name = "docker.io/tiredofit/lemonldap";
+  container_image_name = "docker.io/tiredofit/coredns";
   container_image_tag = "latest";
   cfg = config.host.container.${container_name};
   hostname = config.host.network.dns.hostname;
@@ -43,12 +43,12 @@ in
         };
       };
       logship = mkOption {
-        default = true;
+        default = false;
         type = with types; bool;
         description = "Enable logshipping for this container";
       };
       monitor = mkOption {
-        default = true;
+        default = false;
         type = with types; bool;
         description = "Enable monitoring for this container";
       };
@@ -70,21 +70,58 @@ in
         };
       };
       ports = {
-        llng = {
+        tcp = {
           enable = mkOption {
             default = false;
             type = with types; bool;
-            description = "Enable LemonLDAP-NG handler port binding with network detection";
+            description = "Enable CoreDNS port binding with network detection";
           };
           host = mkOption {
-            default = 2884;
+            default = 53;
             type = with types; int;
             description = "Host port to bind to";
           };
           container = mkOption {
-            default = 2884;
+            default = 53;
             type = with types; int;
-            description = "Container port for LemonLDAP-NG handler";
+            description = "Container port for CoreDNS";
+          };
+          method = mkOption {
+            default = "interface";
+            type = with types; enum [ "interface" "address" "pattern" "zerotier" ];
+            description = "IP resolution method";
+          };
+          excludeInterfaces = mkOption {
+            default = [ "lo" ];
+            type = with types; listOf types.str;
+            description = "Interfaces to exclude";
+          };
+          excludeInterfacePattern = mkOption {
+            default = "docker|veth|br-|enp|eth|wlan";
+            type = with types; str;
+            description = "Interface exclusion pattern";
+          };
+          zerotierNetwork = mkOption {
+            default = "";
+            type = with types; str;
+            description = "ZeroTier network ID";
+          };
+        };
+        udp = {
+          enable = mkOption {
+            default = false;
+            type = with types; bool;
+            description = "Enable CoreDNS port binding with network detection";
+          };
+          host = mkOption {
+            default = 53;
+            type = with types; int;
+            description = "Host port to bind to";
+          };
+          container = mkOption {
+            default = 53;
+            type = with types; int;
+            description = "Container port for CoreDNS";
           };
           method = mkOption {
             default = "interface";
@@ -125,40 +162,47 @@ in
 
       resources = {
         memory = {
-          max = mkDefault "512M";
+          max = mkDefault "1.0G";
         };
       };
 
-      labels = {
-        "traefik.enable" = "true";
-        "traefik.http.routers.${hostname}-llng-handler.rule" = "Host(`${hostname}.handler.auth.${config.host.network.domainname}`)";
-        "traefik.http.services.${hostname}-llng-handler.loadbalancer.server.port" = toString cfg.ports.llng.container;
-        "traefik.proxy.visibility" = "public";
-      };
-
-      ports = if cfg.ports.llng.enable then [
-        {
-          host = toString cfg.ports.llng.host;
-          container = toString cfg.ports.llng.container;
-          method = cfg.ports.llng.method;
-          excludeInterfaces = cfg.ports.llng.excludeInterfaces;
-          excludeInterfacePattern = cfg.ports.llng.excludeInterfacePattern;
-          zerotierNetwork = cfg.ports.llng.zerotierNetwork;
-        }
-      ] else [];
+      ports =
+        (if cfg.ports.tcp.enable then [
+          {
+            host = toString cfg.ports.tcp.host;
+            container = toString cfg.ports.tcp.container;
+            method = cfg.ports.tcp.method;
+            excludeInterfaces = cfg.ports.tcp.excludeInterfaces;
+            excludeInterfacePattern = cfg.ports.tcp.excludeInterfacePattern;
+            zerotierNetwork = cfg.ports.tcp.zerotierNetwork;
+            protocol = "tcp";
+          }
+        ] else []) ++
+        (if cfg.ports.udp.enable then [
+          {
+            host = toString cfg.ports.udp.host;
+            container = toString cfg.ports.udp.container;
+            method = cfg.ports.udp.method;
+            excludeInterfaces = cfg.ports.udp.excludeInterfaces;
+            excludeInterfacePattern = cfg.ports.udp.excludeInterfacePattern;
+            zerotierNetwork = cfg.ports.udp.zerotierNetwork;
+            protocol = "udp";
+          }
+        ] else []);
 
       volumes = [
         {
-          source = "/var/local/data/_system/${container_name}/logs";
-          target = "/www/logs";
+          source = "/var/local/data/_system/${container_name}/data/";
+          target = "/data";
           createIfMissing = mkDefault true;
           removeCOW = mkDefault true;
           permissions = mkDefault "755";
         }
         {
-          source = "/var/local/data/_system/${container_name}/config";
-          target = "/etc/lemonldap-ng";
+          source = "/var/local/data/_system/${container_name}/logs";
+          target = "/logs";
           createIfMissing = mkDefault true;
+          removeCOW = mkDefault true;
           permissions = mkDefault "755";
         }
       ];
@@ -166,12 +210,8 @@ in
       environment = {
         "TIMEZONE" = mkDefault config.time.timeZone;
         "CONTAINER_NAME" = mkDefault "${hostname}-${container_name}";
-        "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
-        "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
-
-        "MODE" = mkDefault "HANDLER";
-        "HANDLER_SOCKET_TCP_PORT" = toString cfg.ports.llng.container;
-        "LLNG_DOMAIN" = mkDefault config.host.network.domainname;
+        "CONTAINER_ENABLE_MONITORING" = if cfg.monitor then "true" else "false";
+        "CONTAINER_ENABLE_LOGSHIPPING" = if cfg.logship then "true" else "false";
       };
 
       secrets = {
@@ -183,7 +223,6 @@ in
       networking = {
         networks = [
           "services"
-          "proxy"
         ];
         aliases = {
           default = mkDefault true;
