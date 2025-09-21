@@ -12,6 +12,7 @@ with lib;
     ./restic.nix
     ./s3ql.nix
     ./socket-proxy.nix
+    ./tcc.nix
     ./traefik-internal.nix
     ./traefik.nix
     ./unbound.nix

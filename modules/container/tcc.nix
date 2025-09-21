@@ -1,10 +1,10 @@
 {config, lib, pkgs, ...}:
 
 let
-  container_name = "postfix-relay";
-  container_description = "Enables Postfix mail relay container";
+  container_name = "cloudflare-companion";
+  container_description = "Enables ability to create CNAMEs with traefik container";
   container_image_registry = "docker.io";
-  container_image_name = "docker.io/tiredofit/postfix";
+  container_image_name = "docker.io/tiredofit/traefik-cloudflare-companion";
   container_image_tag = "latest";
   cfg = config.host.container.${container_name};
   hostname = config.host.network.dns.hostname;
@@ -69,82 +69,6 @@ in
           description = "List of additional secret file paths to include";
         };
       };
-      ports = {
-        smtp = {
-          enable = mkOption {
-            default = false;
-            type = with types; bool;
-            description = "Enable SMTP port binding with network detection";
-          };
-          host = mkOption {
-            default = 25;
-            type = with types; int;
-            description = "Host port to bind to";
-          };
-          container = mkOption {
-            default = 25;
-            type = with types; int;
-            description = "Container port for SMTP";
-          };
-          method = mkOption {
-            default = "interface";
-            type = with types; enum [ "interface" "address" "pattern" "zerotier" ];
-            description = "IP resolution method";
-          };
-          excludeInterfaces = mkOption {
-            default = [ "lo" ];
-            type = with types; listOf types.str;
-            description = "Interfaces to exclude";
-          };
-          excludeInterfacePattern = mkOption {
-            default = "docker|veth|br-|enp|eth|wlan";
-            type = with types; str;
-            description = "Interface exclusion pattern";
-          };
-          zerotierNetwork = mkOption {
-            default = "";
-            type = with types; str;
-            description = "ZeroTier network ID";
-          };
-        };
-        submission = {
-          enable = mkOption {
-            default = false;
-            type = with types; bool;
-            description = "Enable submission port binding with network detection";
-          };
-          host = mkOption {
-            default = 587;
-            type = with types; int;
-            description = "Host port to bind to";
-          };
-          container = mkOption {
-            default = 587;
-            type = with types; int;
-            description = "Container port for submission";
-          };
-          method = mkOption {
-            default = "interface";
-            type = with types; enum [ "interface" "address" "pattern" "zerotier" ];
-            description = "IP resolution method";
-          };
-          excludeInterfaces = mkOption {
-            default = [ "lo" ];
-            type = with types; listOf types.str;
-            description = "Interfaces to exclude";
-          };
-          excludeInterfacePattern = mkOption {
-            default = "docker|veth|br-|enp|eth|wlan";
-            type = with types; str;
-            description = "Interface exclusion pattern";
-          };
-          zerotierNetwork = mkOption {
-            default = "";
-            type = with types; str;
-            description = "ZeroTier network ID";
-          };
-        };
-      };
       hostname = mkOption {
         type = with types; nullOr str;
         default = null;
@@ -172,22 +96,16 @@ in
       };
 
       resources = {
+        cpus = mkDefault "0.25";
         memory = {
-          max = mkDefault "256M";
+          max = mkDefault "128M";
         };
       };
 
       volumes = [
         {
           source = "/var/local/data/_system/${container_name}/logs";
-          target = "/var/log/postfix";
-          createIfMissing = mkDefault true;
-          removeCOW = mkDefault true;
-          permissions = mkDefault "755";
-        }
-        {
-          source = "/var/local/data/_system/${container_name}/data";
-          target = "/data";
+          target = "/logs";
           createIfMissing = mkDefault true;
           permissions = mkDefault "755";
         }
@@ -199,31 +117,22 @@ in
         "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
 
-        "MODE" = mkDefault "RELAY";
-        "SERVER_NAME" = mkDefault "${config.host.network.dns.hostname}.${config.host.network.dns.domain}";
+        "DOCKER_HOST" = "http://socket-proxy:2375";
+        "TRAEFIK_VERSION" = "2";
+        "TARGET_DOMAIN" = "${hostname}.${config.host.network.dns.domain}";
+
+        #"CF_EMAIL" = "email@example.com";  # hosts/common/secrets/container-traefik-cloudflare-companion.env
+        #"CF_TOKEN" = "1234567890";         # hosts/common/secrets/container-traefik-cloudflare-companion.env
+
+        #"DOMAIN1" = "example.com";         # hosts/common/secrets/container-traefik-cloudflare-companion.env
+        #"DOMAIN1_ZONE_ID" = "abc";         # hosts/common/secrets/container-traefik-cloudflare-companion.env
       };
 
-      ports =
-        (if cfg.ports.smtp.enable then [
-          {
-            host = toString cfg.ports.smtp.host;
-            container = toString cfg.ports.smtp.container;
-            method = cfg.ports.smtp.method;
-            excludeInterfaces = cfg.ports.smtp.excludeInterfaces;
-            excludeInterfacePattern = cfg.ports.smtp.excludeInterfacePattern;
-            zerotierNetwork = cfg.ports.smtp.zerotierNetwork;
-          }
-        ] else []) ++
-        (if cfg.ports.submission.enable then [
-          {
-            host = toString cfg.ports.submission.host;
-            container = toString cfg.ports.submission.container;
-            method = cfg.ports.submission.method;
-            excludeInterfaces = cfg.ports.submission.excludeInterfaces;
-            excludeInterfacePattern = cfg.ports.submission.excludeInterfacePattern;
-            zerotierNetwork = cfg.ports.submission.zerotierNetwork;
-          }
-        ] else []);
+      labels = {
+        "traefik.proxy.visibility" = "public";
+      };
+
+      ports = [];
 
       secrets = {
         enable = mkDefault cfg.secrets.enable;
@@ -234,6 +143,7 @@ in
       networking = {
         networks = [
           "services"
+          "socket-proxy"
         ];
         aliases = {
           default = mkDefault true;

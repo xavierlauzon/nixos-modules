@@ -4,8 +4,8 @@ let
   container_name = "traefik";
   container_description = "Enables Traefik reverse proxy container";
   container_image_registry = "docker.io";
-  container_image_name = "docker.io/tiredofit/traefik";
-  container_image_tag = "3.4";
+  container_image_name = "docker.io/nfrastack/traefik";
+  container_image_tag = "3.5";
   cfg = config.host.container.${container_name};
   hostname = config.host.network.dns.hostname;
 in
@@ -71,12 +71,12 @@ in
       };
       docker = {
         constraint = mkOption {
-          default = "Label(`traefik.proxy.visibility`, `public`)";
+          default = "Label(`traefik.proxy.visibility`, `public`) || Label(`traefik.proxy.visibility`, `any`)";
           type = with types; str;
           description = "Docker constraint filter for Traefik service discovery";
         };
         endpoint = mkOption {
-          default = if config.host.container.socket-proxy.enable then "http://socket-proxy:2375" else "unix:///var/run/docker.sock";
+          default = if config.host.container.socket-proxy.enable then "http://socket-proxy.socket-proxy:2375" else "unix:///var/run/docker.sock";
           type = with types; str;
           description = "Docker API endpoint (socket-proxy when enabled, unix socket when disabled)";
         };
@@ -179,13 +179,24 @@ in
           };
         };
       };
+      hostname = mkOption {
+        type = with types; nullOr str;
+        default = null;
+        description = "Custom hostname for the container (overrides default if set)";
+      };
+      containerName = mkOption {
+        type = with types; nullOr str;
+        default = null;
+        description = "Custom container name (overrides default if set)";
+      };
     };
   };
 
   config = mkIf cfg.enable {
     host.feature.virtualization.docker.containers."${container_name}" = {
       enable = mkDefault true;
-      containerName = mkDefault "${container_name}";
+      containerName = mkDefault (if cfg.containerName != null then cfg.containerName else "${container_name}");
+      hostname = mkDefault cfg.hostname;
 
       image = {
         name = mkDefault cfg.image.name;
@@ -201,24 +212,35 @@ in
         };
       };
 
-      hostname = mkDefault "${hostname}.vpn.${config.host.network.domainname}";
-
       volumes = [
         {
           source = "/var/local/data/_system/${container_name}/certs";
-          target = "/data/certs";
+          target = "/certs";
           createIfMissing = mkDefault true;
           permissions = mkDefault "755";
         }
+        #{
+        #  source = "/var/local/data/_system/${container_name}/config";
+        #  target = "/config";
+        #  createIfMissing = mkDefault true;
+        #  permissions = mkDefault "755";
+        #}
         {
-          source = "/var/local/data/_system/${container_name}/config";
-          target = "/data/config";
+          source = "/var/local/data/_system/${container_name}/data";
+          target = "/data";
           createIfMissing = mkDefault true;
           permissions = mkDefault "755";
         }
         {
           source = "/var/local/data/_system/${container_name}/logs";
-          target = "/data/logs";
+          target = "/logs";
+          createIfMissing = mkDefault true;
+          removeCOW = mkDefault true;
+          permissions = mkDefault "755";
+        }
+        {
+          source = "/var/local/data/_system/${container_name}/logs";
+          target = "/logs";
           createIfMissing = mkDefault true;
           removeCOW = mkDefault true;
           permissions = mkDefault "755";
@@ -231,19 +253,29 @@ in
         "CONTAINER_ENABLE_MONITORING" = boolToString cfg.monitor;
         "CONTAINER_ENABLE_LOGSHIPPING" = boolToString cfg.logship;
 
+        "TRAEFIK_USER" = mkDefault "traefik";
+
+        "LOG_LEVEL" = mkDefault "INFO";
+        "LOG_TYPE" = mkDefault "FILE";
+        "ACCESS_LOG_TYPE" = mkDefault "FILE";
+
+        "ENABLE_HTTP" = boolToString cfg.ports.http.enable;
         "HTTP_LISTEN_PORT" = toString cfg.ports.http.container;
+        "ENABLE_HTTPS" = boolToString cfg.ports.https.enable;
         "HTTPS_LISTEN_PORT" = toString cfg.ports.https.container;
+        "ENABLE_HTTP3" = boolToString cfg.ports.http3.enable;
         "HTTP3_LISTEN_PORT" = toString cfg.ports.http3.container;
 
-        "DOCKER_ENDPOINT" = cfg.docker.endpoint;
-        "LOG_LEVEL" = mkDefault "WARN";
-        "ACCESS_LOG_TYPE" = mkDefault "FILE";
-        "LOG_TYPE" = mkDefault "FILE";
-        "TRAEFIK_USER" = mkDefault "traefik";
-        "LETSENCRYPT_CHALLENGE" = mkDefault "DNS";
-        "LETSENCRYPT_DNS_PROVIDER" = mkDefault "cloudflare";
+        "ENABLE_ACME" = mkDefault "TRUE";
+        "ACME_CHALLENGE" = mkDefault "DNS";
+        "ACME_DNS_PROVIDER" = mkDefault "cloudflare";
+        "ACME_DNS_RESOLVER" = "1.1.1.1:53";
+
+        "ENABLE_DOCKER" = mkDefault "TRUE";
         "DOCKER_CONSTRAINTS" = cfg.docker.constraint;
-        "DASHBOARD_HOSTNAME" = mkDefault "${hostname}.vpn.${config.host.network.domainname}";
+        "DOCKER_ENDPOINT" = cfg.docker.endpoint;
+
+        "DASHBOARD_HOSTNAME" = mkDefault "${hostname}.${config.host.network.dns.domain}";
       };
 
       labels = {
@@ -288,13 +320,24 @@ in
 
       networking = {
         networks = [
+          "socket-proxy"
           "services"
           "proxy"
-          "socket-proxy"
         ];
         aliases = {
           default = mkDefault true;
-          extra = mkDefault [ ];
+          extra = mkDefault (
+            let
+              rawName = if cfg.containerName != null then cfg.containerName else "${container_name}";
+              aliasName = lib.strings.removeSuffix "-app" rawName;
+              hostAlias =
+                if builtins.isAttrs config.host.network.dns.hostname
+                then config.host.network.dns.hostname.${aliasName} or null
+                else null;
+              aliasesList = [ aliasName ] ++ (lib.optional (hostAlias != null) hostAlias);
+            in
+              aliasesList ++ (cfg.networking.aliases.extra or [])
+          );
         };
       };
 

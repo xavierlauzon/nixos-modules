@@ -4,8 +4,8 @@ let
   container_name = "fluent-bit";
   container_description = "Enables log shipping container";
   container_image_registry = "docker.io";
-  container_image_name = "docker.io/tiredofit/alpine";
-  container_image_tag = "3.21";
+  container_image_name = "docker.io/nfrastack/container_base";
+  container_image_tag = "alpine_3.22";
   cfg = config.host.container.${container_name};
   hostname = config.host.network.dns.hostname;
 in
@@ -108,13 +108,24 @@ in
           };
         };
       };
+      hostname = mkOption {
+        type = with types; nullOr str;
+        default = null;
+        description = "Custom hostname for the container (overrides default if set)";
+      };
+      containerName = mkOption {
+        type = with types; nullOr str;
+        default = null;
+        description = "Custom container name (overrides default if set)";
+      };
     };
   };
 
   config = mkIf cfg.enable {
     host.feature.virtualization.docker.containers."${container_name}" = {
       enable = mkDefault true;
-      containerName = mkDefault "${container_name}";
+      containerName = mkDefault (if cfg.containerName != null then cfg.containerName else "${container_name}");
+      hostname = mkDefault cfg.hostname;
 
       image = {
         name = mkDefault cfg.image.name;
@@ -169,12 +180,25 @@ in
       networking = {
         networks = [
           "services"
-        ];
+     ];
         aliases = {
           default = mkDefault true;
-          extra = mkDefault [
-            "fluent-proxy"
-          ];
+          extra = mkDefault (
+            let
+              rawName = if cfg.containerName != null then cfg.containerName else "${container_name}";
+              aliasName = lib.strings.removeSuffix "-app" rawName;
+              hostAlias =
+                if builtins.isAttrs config.host.network.dns.hostname
+                then config.host.network.dns.hostname.${aliasName} or null
+                else null;
+              aliasesList = [
+                aliasName
+              ] ++ (lib.optional (hostAlias != null) hostAlias) ++ [
+                  "fluent-proxy"
+                ];
+            in
+              aliasesList ++ (cfg.networking.aliases.extra or [])
+          );
         };
       };
     };
