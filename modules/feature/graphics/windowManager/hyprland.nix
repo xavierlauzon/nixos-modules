@@ -9,16 +9,8 @@ in
     programs = {
       hyprland = {
         enable = mkDefault true;
-        xwayland.enable = mkDefault true;
-      };
-    };
-
-    xdg.portal = {
-      enable = true;
-      config = {
-        common = {
-          "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
-        };
+        package = pkgs.hyprland;
+        withUWSM  = true;
       };
     };
   };

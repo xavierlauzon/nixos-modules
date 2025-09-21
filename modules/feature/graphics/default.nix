@@ -24,19 +24,14 @@
         default = null;
         description = "Backend of displayManager";
       };
-      monitors = mkOption {
-        type = with types; listOf str;
-        default = [];
-        description = "Declare the order of monitors in Window manager configurations";
-      };
     };
   };
 
   config = {
     hardware = {
       graphics = mkIf ((config.host.feature.graphics.enable) && (config.host.feature.graphics.acceleration)) {
-        enable = true;
-        enable32Bit = true; 
+        enable = mkDefault true;
+        enable32Bit = mkDefault false;
       };
     };
 

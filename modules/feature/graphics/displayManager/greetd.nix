@@ -27,12 +27,15 @@ with lib;
         sddm = {
           enable = mkForce false;
         };
+        gdm = {
+          enable = mkForce false;
+        };
       };
       greetd = {
         enable = mkDefault true;
         settings = {
           default_session = {
-            command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time";
+            command = "${pkgs.tuigreet}/bin/tuigreet --time";
             #user = "greeter";
           };
         };
@@ -41,9 +44,6 @@ with lib;
 
       xserver = {
         displayManager = {
-          gdm = {
-            enable = mkForce false;
-          };
           lightdm = {
             enable = mkForce false;
           };
