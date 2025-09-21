@@ -1,4 +1,4 @@
- {config, lib, pkgs, ...}:
+{config, lib, pkgs, ...}:
 
 let
   cfg = config.host.feature.fonts;
@@ -21,7 +21,6 @@ in
     fonts = mkIf graphics.enable {
       enableDefaultPackages = false;
       fontDir.enable = true;
-
       packages = with pkgs; [
         caladea
         cantarell-fonts
@@ -39,12 +38,25 @@ in
         roboto
         ubuntu_font_family
         weather-icons
-        nerd-fonts.jetbrains-mono
-        nerd-fonts.hack
-        nerd-fonts.droid-sans-mono
-        nerd-fonts.noto
-        nerd-fonts.open-dyslexic
-      ];
+
+      ] ++ (
+        if (lib.versionAtLeast lib.version "25.05pre") then [
+          nerd-fonts.droid-sans-mono
+          nerd-fonts.hack
+          nerd-fonts.jetbrains-mono
+          nerd-fonts.noto
+          nerd-fonts.zed-mono
+        ] else [
+          (nerdfonts.override {
+            fonts = [
+              "DroidSansMono"
+              "Hack"
+              "JetBrainsMono"
+              "Noto"
+            ];
+          })
+        ]
+      );
 
       # user defined fonts
       # the reason there's Noto Color Emoji everywhere is to override DejaVu's
@@ -52,7 +64,7 @@ in
       fontconfig = mkIf graphics.enable {
         enable = mkDefault true;
         antialias = mkDefault true;
-        cache32Bit = mkDefault true;
+        cache32Bit = mkDefault false;
         hinting.enable = mkDefault true;
         hinting.autohint = mkDefault true;
         defaultFonts = {

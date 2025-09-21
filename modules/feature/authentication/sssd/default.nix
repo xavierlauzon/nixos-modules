@@ -124,7 +124,6 @@ in
           description = "URI of LDAP Host";
         };
       };
-
       loglevel = {
         sssd = mkOption {
           default = 2;
@@ -150,6 +149,13 @@ in
           default = cfg.loglevel.sssd;
           type = with types; int;
           description = "Sudo Log Level 0-9";
+        };
+      };
+      pam = {
+        SSHDStrictMode = mkOption {
+          default = true;
+          type = with types; bool;
+          description = "Enable PAM Strict mode for SSHD Logins";
         };
       };
     };
@@ -196,8 +202,13 @@ in
     };
 
     security = {
+      pam = {
+        services = {
+          sshd.sssdStrictAccess = cfg.pam.SSHDStrictMode;
+          systemd-user.makeHomeDir = mkDefault true;
+        };
+      };
       sudo.package = pkgs.sudo.override { withSssd = true; };
-      pam.services.systemd-user.makeHomeDir = true;
     };
 
     ### We switch to SOPS declarations here because we have credentials that need to be secrets
