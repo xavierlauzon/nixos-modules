@@ -1,7 +1,7 @@
 {config, lib, pkgs, ...}:
 
 let
-  defaultDomainname =
+  defaultdns.domain =
   if (config.host.network.dns.domain == "null")
   then true
   else false;
@@ -51,7 +51,8 @@ in
 
   config = mkIf cfg.enable {
     assertions = [
-      { assertion = !defaultDomainname; message = "[host.network.dns.domain] Enter a domain name to add network uniqueness";}
+      { assertion = !defaultdns.domain
+; message = "[host.network.dns.domain] Enter a domain name to add network uniqueness";}
       { assertion = !defaultHostname; message = "[host.network.dns.hostname] Enter a hostname to add network uniqueness";}
     ];
 

@@ -21,6 +21,12 @@ in
             platform = "aarch64-linux";
           };
         };
+        documentation = {
+          enable = mkDefault true;
+          man = {
+            enable = mkDefault true;
+          };
+        };
         fonts = {
           enable = mkDefault true;
         };
@@ -28,7 +34,20 @@ in
           enable = mkDefault true;            # We're working with a GUI here
           acceleration = mkDefault true;      # Since we have a GUI, we want openGL
         };
-        powermanagement.enable = mkDefault true;
+        powermanagement = {
+          battery.enable = mkDefault false;
+          disks = {
+            enable = mkDefault true;
+            platter = mkDefault true;
+          };
+          powertop = {
+            enable = mkDefault true;
+            startup = mkDefault false;
+          };
+          thermal.enable = mkDefault false;
+          tlp.enable = mkDefault false;
+          undervolt.enable = mkDefault false;
+        };
         virtualization = {
           docker = {
             enable = mkDefault true;

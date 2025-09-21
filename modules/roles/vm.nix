@@ -10,29 +10,29 @@ in
   ];
 
   config = mkIf (role == "vm") {
-    documentation = {                                 # This makes some nix commands not display --help
-      enable = mkDefault false;
-      info.enable = mkDefault false;
-      man.enable = mkDefault false;
-      nixos.enable = mkDefault false;
-    };
-
     host = {
       feature = {
         boot = {
           efi.enable = mkDefault true;
           graphical.enable = mkDefault false;
         };
+        #documentation.enable = mkDefault false;
         graphics = {
           enable = mkDefault false;                   # Maybe if we were doing openCL
         };
         powermanagement = {
-          enable = mkDefault true;
-        };
-        virtualization = {
-          docker = {
-            enable = mkDefault true;
+          battery.enable = mkDefault false;
+          disks = {
+            enable = mkDefault false;
+            platter = mkDefault false;
           };
+          powertop = {
+            enable = mkDefault false;
+            startup = mkDefault false;
+          };
+          thermal.enable = mkDefault false;
+          tlp.enable = mkDefault fasle;
+          undervolt.enable = mkDefault false;
         };
       };
       filesystem = {
@@ -60,7 +60,8 @@ in
         yubikey.enable = mkDefault false;
       };
       network = {
-        firewall.fail2ban.enable = mkDefault true;
+        #manager = mkDefault "networkmanager";
+        #firewall.fail2ban.enable = mkDefault false;
       };
       service = {
         logrotate.enable = mkDefault true;
@@ -69,13 +70,6 @@ in
           harden = mkDefault true;
         };
       };
-    };
-
-    networking = {
-      networkmanager= {
-        enable = mkDefault false;
-      };
-
     };
 
     services.qemuGuest.enable = mkDefault true;        # Make the assumption we're using QEMU

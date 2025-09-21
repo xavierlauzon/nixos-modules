@@ -52,7 +52,7 @@ in
   config = mkIf cfg.enable {
     services.zerotierone = {
       enable = true;
-      package = pkgs.unstable.zerotierone;
+      #package = pkgs.unstable.zerotierone;
       port = cfg.port;
     };
 
@@ -110,6 +110,12 @@ in
 
         ${metrics_cleanup}
       '';
+      serviceConfig = {
+        Restart = "always";
+        RestartSec = 10;
+      };
+      startLimitIntervalSec = 300;
+      startLimitBurst = 50;
     };
 
     sops.secrets = {

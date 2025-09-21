@@ -12,9 +12,10 @@ in
     host = {
       feature = {
         boot = {
-          efi.enable = mkDefault true;
+          efi.enable = mkDefault false;
           graphical.enable = mkDefault false;
         };
+        #documentation.enable = mkDefault false;
         fonts = {
           enable = mkDefault false;
         };
@@ -50,7 +51,7 @@ in
         firewall.fail2ban.enable = mkDefault false;
       };
       service = {
-        logrotate.enable = mkDefault false;
+        #logrotate.enable = mkDefault false;
         ssh = {
           enable = mkDefault true;
           harden = mkDefault true;

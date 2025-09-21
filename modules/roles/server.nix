@@ -1,4 +1,4 @@
-{ config, lib, modulesPath, pkgs, ... }:
+{ config, lib, modulesPath, options, pkgs, ... }:
 let
   role = config.host.role;
 in
@@ -21,13 +21,6 @@ in
       };
     };
 
-    documentation = {                                 # This makes some nix commands not display --help
-      enable = mkDefault false;
-      info.enable = mkDefault false;
-      man.enable = mkDefault false;
-      nixos.enable = mkDefault false;
-    };
-
     environment.variables.BROWSER = "echo";           # Print the URL instead on servers
 
     fonts.fontconfig.enable = mkDefault false;        # No GUI
@@ -38,8 +31,25 @@ in
           efi.enable = mkDefault true;
           graphical.enable = mkDefault false;
         };
+        documentation = {
+          enable = mkDefault true;
+          man = {
+            enable = mkDefault false;
+          };
+        };
         graphics = {
           enable = mkDefault false;                   # Maybe if we were doing openCL
+        };
+        powermanagement = {
+          cpu = {
+            enable = mkDefault false;
+          };
+          disks = {
+            enable = mkDefault true;
+            platter = mkDefault false;
+          };
+          thermal.enable = mkForce false;
+          undervolt.enable = mkForce false;
         };
         virtualization = {
           docker = {
@@ -99,14 +109,15 @@ in
 
     systemd = {
       enableEmergencyMode = mkDefault false;          # Allow system to continue booting in headless mode.
-      watchdog = mkDefault {                          # See https://0pointer.de/blog/projects/watchdog.html
-        runtimeTime = "20s";                          # Hardware watchdog reboot after 20s
-        rebootTime = "30s";                           # Force reboot when hangs after 30s. See https://utcc.utoronto.ca/~cks/space/blog/linux/SystemdShutdownWatchdog
+      settings.Manager = mkDefault {                  # See https://0pointer.de/blog/projects/watchdog.html
+        RuntimeWatchdogSec = "20s";
+        RebootWatchdogSec = "30s";
+        KExecWatchdogSec = "1m";
       };
       services = {
         systemd-networkd.stopIfChanged = false; # Shortens network downtime when upgrading
         systemd-resolved.stopIfChanged = false; # Fixes resolution failures during resolved upgrade
-        nix-daemon.serviceConfig.OOMScoreAdjust = lib.mkDefault 250; # Favor killing nix builds over other services
+        nix-daemon.serviceConfig.OOMScoreAdjust = mkDefault 250; # Favor killing nix builds over other services
         nix-gc.serviceConfig = { # Reduce potential for nix-gc to affect perofmance of other services
           CPUSchedulingPolicy = "batch";
           IOSchedulingClass = "idle";
