@@ -228,6 +228,7 @@ in
           package = pkgs.rke2_1_32;
           role = role;
           serverAddr = optionalString isJoiningCluster cfg.cluster.serverURL;
+          cni = "cilium";
         }
         // optionalAttrs (!isInitialServer) { tokenFile = config.sops.secrets.token.path; }
         # Path configurations
@@ -280,8 +281,10 @@ in
       environment.systemPackages = [
         pkgs.kubernetes-helm
         pkgs.kubectl
-        pkgs.nfs-utils # longhorn
-        pkgs.openiscsi # longhorn
+        pkgs.helm
+        pkgs.cilium-cli # cilium
+        pkgs.nfs-utils  # longhorn
+        pkgs.openiscsi  # longhorn
       ];
 
       services = {

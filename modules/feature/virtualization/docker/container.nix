@@ -104,6 +104,11 @@ let
               default = true;
               description = "Create directory if it doesn't exist";
             };
+            readOnly = mkOption {
+              type = types.bool;
+              default = false;
+              description = "Mount as read-only";
+            };
             removeCOW = mkOption {
               type = types.bool;
               default = false;
@@ -384,7 +389,7 @@ let
 
   containercfg = config.host.feature.virtualization.docker.containers;
   proxy_env = config.networking.proxy.envVars;
-  hostname = config.host.network.hostname;
+  hostname = config.host.network.dns.hostname;
 
   generateEnvironmentFiles = containerName: cfg:
     let
@@ -513,8 +518,12 @@ let
   # Generate volume arguments for Docker
   generateVolumeArgs = cfg: concatMapStringsSep " " (vol:
     let
-      mountString = "${vol.source}:${vol.target}";
-      fullMountString = if vol.options != "" then "${mountString}:${vol.options}" else mountString;
+      baseMount = "${vol.source}:${vol.target}";
+      mountOptions =
+        if vol.options != "" then vol.options
+        else if vol.readOnly then "ro"
+        else "";
+      fullMountString = if mountOptions != "" then "${baseMount}:${mountOptions}" else baseMount;
     in
     "--volume ${fullMountString}"
   ) cfg.volumes;
@@ -528,27 +537,20 @@ let
         case "${portCfg.host}" in
           "80")
             IP="$BINDING_IP_80"
-            #echo "Port 80: Using IP from BINDING_IP_80: $IP"
             ;;
           "443")
             IP="$BINDING_IP_443"
-            #echo "Port 443: Using IP from BINDING_IP_443: $IP"
             ;;
           *)
             eval "IP=\$BINDING_IP_${portCfg.host}"
-            #echo "Port ${portCfg.host}: Using eval, IP: $IP"
             ;;
         esac
         if [ -n "$IP" ]; then
           PORT_ARGS="$PORT_ARGS -p $IP:${portCfg.host}:${portCfg.container}/${portCfg.protocol}"
-          #echo "Added port binding: $IP:${portCfg.host}:${portCfg.container}/${portCfg.protocol}"
         else
-          PORT_ARGS="$PORT_ARGS -p ${portCfg.host}:${portCfg.container}/${portCfg.protocol}"
-          #echo "Using default binding for port ${portCfg.host} (no IP found)"
+          echo "ERROR: No interface/IP found for port ${portCfg.host}. Refusing to start container."
+          exit 1
         fi
-      else
-        PORT_ARGS="$PORT_ARGS -p ${portCfg.host}:${portCfg.container}/${portCfg.protocol}"
-        #echo "Port ${portCfg.host} not enabled, using default binding"
       fi
     '') cfg.ports}
   '';
@@ -828,7 +830,6 @@ in
     sops.secrets = mkMerge (mapAttrsToList (containerName: cfg:
       generateSOPSSecrets containerName cfg
     ) containercfg);
-
 
     systemd.services = mkMerge [
       # Apply special port services for containers with special ports
