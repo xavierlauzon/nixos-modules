@@ -38,13 +38,20 @@ in
         default = [];
         description = "Files that should be persisted between reboots";
       };
+      persist = {
+        machine-id = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Persist /etc/machine-id across reboots.";
+        };
+      };
     };
   };
 
   config = lib.mkMerge [
   {
     boot.initrd = lib.mkMerge [
-      (lib.mkIf (cfg_impermanence.enable && !cfg_encrypt.enable) {
+      (lib.mkIf ((cfg_impermanence.enable) && (!cfg_encrypt.enable) && (config.host.filesystem.btrfs.enable)) {
         postDeviceCommands = pkgs.lib.mkBefore ''
           mkdir -p /mnt
           mount -o subvol=/ /dev/disk/by-partlabel/rootfs /mnt
@@ -62,7 +69,7 @@ in
         '';
       })
 
-      (lib.mkIf (cfg_impermanence.enable && cfg_encrypt.enable) {
+      (lib.mkIf ((cfg_impermanence.enable) && (cfg_encrypt.enable) && (config.host.filesystem.btrfs.enable)) {
         systemd = {
           enable = true;
           services.rollback = {
@@ -100,7 +107,7 @@ in
       })
     ];
 
-    environment = mkIf cfg_impermanence.enable {
+    environment = mkIf ((cfg_impermanence.enable) && (config.host.filesystem.btrfs.enable)) {
       systemPackages =
         let
           # Running this will show what changed during boot to potentially use for persisting
@@ -135,18 +142,18 @@ in
           ];
 
         persistence."/persist" = {
-            hideMounts = true ;
-            directories = [
-              "/root"                            # Root
-              "/var/lib/nixos"                   # Persist UID and GID mappings
-            ]  ++ cfg_impermanence.directories;
-            files = [
-              "/etc/machine-id"
-            ] ++ cfg_impermanence.files;
-          };
+          hideMounts = true ;
+          directories = [
+            "/root"                            # Root
+            "/var/lib/nixos"                   # Persist UID and GID mappings
+          ]  ++ cfg_impermanence.directories;
+          files = [
+          ] ++ cfg_impermanence.files
+            ++ lib.optional cfg_impermanence.persist.machine-id "/etc/machine-id";
+        };
     };
 
-    fileSystems = mkIf cfg_impermanence.enable {
+    fileSystems = mkIf ((cfg_impermanence.enable) && (config.host.filesystem.btrfs.enable)) {
       "/persist" = {
         options = [ "subvol=persist/active" "compress=zstd" "noatime"  ];
         neededForBoot = true;
@@ -156,30 +163,19 @@ in
       };
     };
 
-    host.filesystem.impermanence.directories = mkIf cfg_impermanence.enable (
-      (optionals config.networking.networkmanager.enable [
-        "/etc/NetworkManager"              # NetworkManager
-        "/var/lib/NetworkManager"          # NetworkManager
-      ]) ++
-      (optionals config.host.feature.virtualization.rke2.enable [
-        "/etc/rancher"                     # RKE2 configuration
-        "/var/lib/rancher"                 # RKE2 data
-      ])
-    );
-
-    #services = mkIf cfg_impermanence.enable {
-    #  btrbk = {
-    #    instances."btrbak" = {
-    #      settings = {
-    #        volume."/persist" = {
-    #          snapshot_create = "always";
-    #          subvolume = ".";
-    #          snapshot_dir = ".snapshots";
-    #        };
-    #      };
-    #    };
-    #  };
-    #};
+    services = mkIf ((cfg_impermanence.enable) && (config.host.filesystem.btrfs.enable) && (config.host.filesystem.btrfs.snapshot)) {
+      btrbk = {
+        instances."btrbak" = {
+          settings = {
+            volume."/persist" = {
+              snapshot_create = mkDefault "always";
+              subvolume = mkDefault ".";
+              snapshot_dir = mkDefault ".snapshots";
+            };
+          };
+        };
+      };
+    };
 
     security = mkIf cfg_impermanence.enable {
       sudo.extraConfig = ''
