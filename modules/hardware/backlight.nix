@@ -12,16 +12,29 @@ in
         type = with types; bool;
         description = "Enables tools for display backlight control";
       };
+      keys = {
+        down = mkOption {
+          default = 224;
+          type = with types; int;
+          description = "Key to increase brightness";
+        };
+        up = mkOption {
+          default = 225;
+          type = with types; int;
+          description = "Key to increase brightness";
+        };
+      };
     };
   };
 
   config = mkIf cfg.enable {
-    programs.light.enable = true;
+    hardware.acpilight.enable = mkDefault true;
+    programs.light.enable = mkDefault true;
     services.actkbd = {
-      enable = true;
+      enable = mkDefault true;
       bindings = [
-        { keys = [ 233 ]; events = [ "key" ]; command = "/run/current-system/sw/bin/light -A 10"; }
-        { keys = [ 232 ]; events = [ "key" ]; command = "/run/current-system/sw/bin/light -U 10"; }
+        { keys = [ cfg.keys.up ]; events = [ "key" ]; command = "/run/current-system/sw/bin/light -A 10"; }
+        { keys = [ cfg.keys.down ]; events = [ "key" ]; command = "/run/current-system/sw/bin/light -U 10"; }
       ];
     };
   };

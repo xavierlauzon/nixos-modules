@@ -3,12 +3,15 @@
 with lib;
 {
   imports = [
+    ./cpu
+    ./gpu
     ./android.nix
     ./backlight.nix
     ./bluetooth.nix
-    ./cpu
-    ./gpu
+    ./fingerprint.nix
+    ./firmware.nix
     ./keyboard.nix
+    ./lid.nix
     ./printing.nix
     ./raid.nix
     ./scanner.nix

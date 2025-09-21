@@ -2,6 +2,7 @@
   with lib;
 {
   imports = [
+    ./apple.nix
     ./amd.nix
     ./intel.nix
     ./nvidia.nix
@@ -9,7 +10,7 @@
 
   options = {
     host.hardware.gpu = mkOption {
-        type = types.enum [ "amd" "intel" "nvidia" "hybrid-nvidia" "hybrid-amd" "integrated-amd" "pi" null];
+        type = types.enum [ "amd" "apple" "intel" "nvidia" "hybrid-nvidia" "hybrid-amd" "integrated-amd" "pi" null];
         default = null;
         description = "Manufacturer/type of the primary system GPU";
     };
