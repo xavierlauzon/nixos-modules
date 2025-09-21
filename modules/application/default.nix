@@ -7,9 +7,11 @@ with lib;
     ./bind.nix
     ./binutils.nix
     ./busybox.nix
+    ./comma.nix
     ./coreutils.nix
     ./curl.nix
     ./diceware.nix
+    ./direnv.nix
     ./dust.nix
     ./e2fsprogs.nix
     ./fzf.nix
@@ -21,6 +23,7 @@ with lib;
     ./kitty.nix
     ./less.nix
     ./links.nix
+    ./liquidprompt.nix
     ./lsof.nix
     ./mtr.nix
     ./nano.nix
@@ -28,10 +31,13 @@ with lib;
     ./openssl.nix
     ./pciutils.nix
     ./psmisc.nix
+    ./rclone.nix
+    ./ripgrep.nix
     ./rsync.nix
     ./strace.nix
     ./tmux.nix
     ./tree.nix
     ./wget.nix
+    ./zoxide.nix
   ];
 }
