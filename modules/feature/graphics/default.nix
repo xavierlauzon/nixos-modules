@@ -31,7 +31,7 @@
     hardware = {
       graphics = mkIf ((config.host.feature.graphics.enable) && (config.host.feature.graphics.acceleration)) {
         enable = mkDefault true;
-        enable32Bit = mkDefault false;
+        enable32Bit = mkDefault true;
       };
     };
 
