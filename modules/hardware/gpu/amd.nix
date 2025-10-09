@@ -15,7 +15,7 @@ in {
     ];
 
     hardware.graphics.extraPackages = with pkgs; [
-      amdvlk
+      mesa
       rocmPackages.clr
       rocmPackages.clr.icd
       rocmPackages.rocminfo
@@ -27,11 +27,6 @@ in {
     hardware.amdgpu = {
         initrd.enable = true;
         opencl.enable = true;
-        amdvlk = {
-            enable = true;
-            supportExperimental.enable = true;
-            support32Bit.enable = true;
-        };
     };
 
     environment = {
