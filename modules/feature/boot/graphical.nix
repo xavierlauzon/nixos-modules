@@ -1,4 +1,4 @@
-{config, lib, pkgs, ...}:
+{config, lib, pkgs, inputs, ...}:
 
 let
   cfg = config.host.feature.boot.graphical;
@@ -19,8 +19,8 @@ in
     boot = {
       plymouth = {
         enable = true ;
-        theme = "lone" ;
-        themePackages = [(pkgs.adi1090x-plymouth-themes.override {selected_themes = ["lone"];})];
+        theme = "minecraft" ;
+        themePackages = [ inputs.minecraft-plymouth-theme.packages.${pkgs.system}.plymouth-minecraft-theme ];
       };
     };
   };
