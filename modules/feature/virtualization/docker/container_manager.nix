@@ -89,7 +89,7 @@ in
         DOCKER_COMPOSE_STACK_DATA_PATH=''${DOCKER_COMPOSE_STACK_DATA_PATH:-"/var/local/data/"}
         DOCKER_STACK_SYSTEM_DATA_PATH=''${DOCKER_STACK_SYSTEM_DATA_PATH:-"/var/local/data/_system/"}
         DOCKER_COMPOSE_STACK_APP_RESTART_FIRST=''${DOCKER_COMPOSE_STACK_APP_RESTART_FIRST:-"auth.example.com"}
-        DOCKER_STACK_SYSTEM_APP_RESTART_ORDER=''${DOCKER_STACK_SYSTEM_APP_RESTART_ORDER:-"socket-proxy coredns error-pages traefik traefik-internal unbound openldap postfix-relay llng-handler restic clamav zabbix"}
+        DOCKER_STACK_SYSTEM_APP_RESTART_ORDER=''${DOCKER_STACK_SYSTEM_APP_RESTART_ORDER:-"socket-proxy coredns error-pages traefik traefik-internal unbound openldap postfix-relay llng-handler restic clamav zabbix zabbix-proxy"}
 
         ###
         #  system directory: $DOCKER_STACK_SYSTEM_DATA_PATH
@@ -272,7 +272,7 @@ in
         }
 
         ct_restart_sssd() {
-          if pgrep -x "sssd" >/dev/null ; then
+          if ${pkgs.procps}/bin/pgrep -x "sssd" >/dev/null ; then
               echo "**** [container-tool] Restarting SSSD"
               $dsudo systemctl restart sssd
           fi
@@ -351,7 +351,8 @@ in
           after = [ "docker.service" ];
           serviceConfig = {
             Type = "oneshot";
-            ExecCondition = "/bin/sh -c '[ $(${pkgs.gawk}/bin/awk \"{print int(\$1)}\" /proc/uptime) -lt 300 ]'";
+            # Run only on recent boots (uptime < 300s). Use awk to return 0 when uptime < 300.
+            ExecCondition = "${pkgs.gawk}/bin/awk '{exit (int($1) >= 300)}' /proc/uptime";
             ExecStart = [
               "/bin/sh -c 'echo \"Executing system startup container management tasks\"'"
               "/run/current-system/sw/bin/container-tool stop"
