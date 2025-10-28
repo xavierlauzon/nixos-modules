@@ -3,10 +3,8 @@
 with lib;
 {
   imports = [
-    ./eternal_terminal.nix
     ./fluent-bit.nix
     ./herald.nix
-    ./iodine.nix
     ./logrotate.nix
     ./monit.nix
     ./ssh.nix
