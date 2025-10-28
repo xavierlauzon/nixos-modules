@@ -3,7 +3,6 @@
 with lib;
 {
   imports = [
-    ./coredns.nix
     ./eternal_terminal.nix
     ./fluent-bit.nix
     ./herald.nix
