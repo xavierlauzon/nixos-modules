@@ -355,12 +355,6 @@ in
       ];
     };
 
-    hardware = {
-      asahi = mkIf (cfg.apple.enable && (device.cpu == "apple")) {
-        setupAsahiSound = mkIf (cfg.apple.enable && (device.cpu == "apple")) (mkForce true);
-      };
-    };
-
     services.pulseaudio = lib.mkMerge [
       (lib.mkIf (cfg.enable && cfg.server == "pulseaudio") {
         enable = mkForce true;
