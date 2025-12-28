@@ -336,17 +336,8 @@ in
         default = "pipewire";
         description = "Which sound server (pulseaudio/pipewire)";
       };
-      apple.enable = mkOption {
-        default = false;
-        type = with types; bool;
-        description = "Enable Apple Sound Support";
-      };
     };
   };
-
-  imports = [
-    inputs.apple-silicon.nixosModules.default
-  ];
 
   config = {
     environment = {
