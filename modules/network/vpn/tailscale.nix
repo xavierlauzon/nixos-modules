@@ -18,12 +18,12 @@ in
   config = mkIf cfg.enable {
     services.tailscale = {
       enable = true;
-      package = pkgs.tailscale;
+      package = pkgs.unstable.tailscale;
       useRoutingFeatures = lib.mkDefault "client";
     };
     networking.firewall = {
       checkReversePath = "loose";
-      allowedUDPPorts = [ 41641 ]; # Facilitate firewall punching
+      allowedUDPPorts = [ 41641 ];
     };
 
     host.filesystem.impermanence.directories = lib.mkIf config.host.filesystem.impermanence.enable [
