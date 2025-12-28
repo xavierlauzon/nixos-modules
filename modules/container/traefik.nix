@@ -5,7 +5,7 @@ let
   container_description = "Enables Traefik reverse proxy container";
   container_image_registry = "docker.io";
   container_image_name = "docker.io/nfrastack/traefik";
-  container_image_tag = "3.5";
+  container_image_tag = "latest";
   cfg = config.host.container.${container_name};
   hostname = config.host.network.dns.hostname;
 in

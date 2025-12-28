@@ -4,8 +4,8 @@ let
   container_name = "fluent-bit";
   container_description = "Enables log shipping container";
   container_image_registry = "docker.io";
-  container_image_name = "docker.io/nfrastack/container_base";
-  container_image_tag = "alpine_3.22";
+  container_image_name = "docker.io/nfrastack/base";
+  container_image_tag = "latest";
   cfg = config.host.container.${container_name};
   hostname = config.host.network.dns.hostname;
 in

@@ -4,13 +4,14 @@ let
   container_name = "openldap";
   container_description = "Enables OpenLDAP directory server container";
   container_image_registry = "docker.io";
-  container_image_name = "docker.io/tiredofit/openldap-fusiondirectory";
-  container_image_tag = "2.6-1.4";
+  container_image_name = "docker.io/nfrastack/openldap-fusiondirectory";
+  container_image_tag = "2.6-1.5";
   cfg = config.host.container.${container_name};
   hostname = config.host.network.dns.hostname;
 in
   with lib;
 {
+  options = {
   options = {
     host.container.${container_name} = {
       enable = mkOption {
@@ -67,6 +68,25 @@ in
           default = [ ];
           type = with types; listOf str;
           description = "List of additional secret file paths to include";
+        };
+      };
+      certs = {
+        volume = {
+          source = mkOption {
+            default = "/var/local/data/_system/${container_name}/certs";
+            type = with types; str;
+            description = "Source path for container certs volume.";
+          };
+          target = mkOption {
+            default = "/certs/";
+            type = with types; str;
+            description = "Target path inside container for certs volume.";
+          };
+          readOnly = mkOption {
+            default = false;
+            type = with types; bool;
+            description = "Mount certs volume as readonly.";
+          };
         };
       };
       ports = {
@@ -201,33 +221,22 @@ in
 
       volumes = [
         {
-          source = "/var/local/data/_system/${container_name}/asset/custom-plugins";
-          target = "/assets/fusiondirectory-custom";
-          createIfMissing = mkDefault true;
-          permissions = mkDefault "755";
-        }
-        {
           source = "/var/local/data/_system/${container_name}/backup";
           target = "/data/backup";
           createIfMissing = mkDefault true;
           permissions = mkDefault "755";
         }
-        #{
-        #  source = "/var/local/data/_system/${container_name}/certs";
-        #  target = "/certs";
-        #  createIfMissing = mkDefault true;
-        #  permissions = mkDefault "755";
-        #}
         {
-          source = "/var/local/data/_system/${container_name}/config";
-          target = "/etc/openldap/slapd.d";
-          createIfMissing = mkDefault true;
-          permissions = mkDefault "755";
+          source = cfg.certs.volume.source;
+          target = cfg.certs.volume.target;
+          createIfMissing = mkDefault false;
+          readOnly = mkDefault cfg.certs.volume.readOnly;
         }
         {
           source = "/var/local/data/_system/${container_name}/data";
-          target = "/var/lib/openldap";
+          target = "/data";
           createIfMissing = mkDefault true;
+          removeCOW = mkDefault true;
           permissions = mkDefault "755";
         }
         {
@@ -236,12 +245,6 @@ in
           createIfMissing = mkDefault true;
           removeCOW = mkDefault true;
           permissions = mkDefault "755";
-        }
-        {
-          source = "/var/local/data/_system/traefik-internal/certs/dump/${config.host.network.dns.domain}";
-          target = "/certs";
-          createIfMissing = mkDefault false;
-          readOnly = mkDefault true;
         }
       ];
 
