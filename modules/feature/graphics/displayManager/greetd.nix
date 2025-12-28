@@ -24,31 +24,32 @@ with lib;
 
     services = {
       displayManager = {
-        sddm = {
-          enable = mkForce false;
-        };
-        gdm = {
-          enable = mkForce false;
-        };
+        sddm.enable = mkForce false;
+        gdm.enable = mkForce false;
       };
       greetd = {
         enable = mkDefault true;
         settings = {
           default_session = {
-            command = "${pkgs.tuigreet}/bin/tuigreet --time";
+            command = mkDefault (
+              let
+                greeter = config.host.feature.graphics.displayManager.greetd.greeter.name;
+                gtkgreetBin = "${pkgs.gtkgreet}/bin/gtkgreet";
+                regreetBin = "${pkgs.regreet}/bin/regreet";
+                tuigreetBin = "${pkgs.tuigreet}/bin/tuigreet";
+              in
+                if greeter == "tuigreet" then "${tuigreetBin} --time"
+                else if greeter == "gtk" then gtkgreetBin
+                else if greeter == "regreet" then regreetBin
+                else tuigreetBin
+            );
             #user = "greeter";
           };
         };
-        ## TODO - Finish this later
       };
-
-      xserver = {
-        displayManager = {
-          lightdm = {
-            enable = mkForce false;
-          };
-          startx.enable = config.services.xserver.enable;
-        };
+      xserver.displayManager = {
+        lightdm.enable = mkForce false;
+        startx.enable = config.services.xserver.enable;
       };
     };
   };
