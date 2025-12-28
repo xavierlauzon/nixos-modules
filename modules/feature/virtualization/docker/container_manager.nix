@@ -14,10 +14,38 @@ in
           type = with types; bool;
           description = "Enables docker compose utility and associated aliases";
         };
+        path = {
+          data = {
+            stack = mkOption {
+              type = types.str;
+              default = "/var/local/data/";
+              description = "Path to the docker compose stack data directory.";
+            };
+            system = mkOption {
+              type = types.str;
+              default = "/var/local/data/_system/";
+              description = "Path to the docker stack system data directory.";
+            };
+          };
+        };
+        app = {
+          restart = {
+            first = mkOption {
+              type = types.str;
+              default = "auth.example.com";
+              description = "First application to restart in the stack.";
+            };
+            systemOrder = mkOption {
+              type = types.str;
+              default = "socket-proxy coredns error-pages traefik traefik-internal unbound openldap postfix-relay llng-handler restic clamav zabbix zabbix-proxy";
+              description = "Order to restart system applications in the stack.";
+            };
+          };
+        };
       };
       service.docker_container_manager = {
         enable = mkOption {
-          default = false;
+          default = (config.host.feature.virtualization.docker.enable) && (config.host.feature.virtualization.docker.compose.enable);
           type = with types; bool;
           description = "Start and stop containers on bootup / shutdown";
         };
@@ -28,7 +56,7 @@ in
   config = mkIf cfg.enable {
     environment.systemPackages = with pkgs; [
       (writeShellScriptBin "container-tool" ''
-        set -euo pipefail
+        #set -euo pipefail
 
         export DOCKER_COMPOSE_TIMEOUT=${toString config.host.feature.virtualization.docker.daemon.shutdownTimeout}
         if ! [[ "$DOCKER_COMPOSE_TIMEOUT" =~ ^[0-9]+$ ]]; then
@@ -38,7 +66,7 @@ in
         if command -v awk >/dev/null 2>&1; then
           awk_bin="$(command -v awk)"
         elif [ -x "${pkgs.gawk}/bin/awk" ]; then
-          awk_bin="$${pkgs.gawk}/bin/awk"
+          awk_bin="${pkgs.gawk}/bin/awk"
         else
           echo "Error: 'awk' command not found. Please install 'awk'." >&2
           exit 1
@@ -86,10 +114,10 @@ in
           dsudo='sudo'
         fi
 
-        DOCKER_COMPOSE_STACK_DATA_PATH=''${DOCKER_COMPOSE_STACK_DATA_PATH:-"/var/local/data/"}
-        DOCKER_STACK_SYSTEM_DATA_PATH=''${DOCKER_STACK_SYSTEM_DATA_PATH:-"/var/local/data/_system/"}
-        DOCKER_COMPOSE_STACK_APP_RESTART_FIRST=''${DOCKER_COMPOSE_STACK_APP_RESTART_FIRST:-"auth.example.com"}
-        DOCKER_STACK_SYSTEM_APP_RESTART_ORDER=''${DOCKER_STACK_SYSTEM_APP_RESTART_ORDER:-"socket-proxy coredns error-pages traefik traefik-internal unbound openldap postfix-relay llng-handler restic clamav zabbix zabbix-proxy"}
+        DOCKER_COMPOSE_STACK_DATA_PATH=''${DOCKER_COMPOSE_STACK_DATA_PATH:-"${cfg.path.data.stack}"}
+        DOCKER_STACK_SYSTEM_DATA_PATH=''${DOCKER_STACK_SYSTEM_DATA_PATH:-"${cfg.path.data.system}"}
+        DOCKER_COMPOSE_STACK_APP_RESTART_FIRST=''${DOCKER_COMPOSE_STACK_APP_RESTART_FIRST:-"${cfg.app.restart.first}"}
+        DOCKER_STACK_SYSTEM_APP_RESTART_ORDER=''${DOCKER_STACK_SYSTEM_APP_RESTART_ORDER:-"${cfg.app.restart.systemOrder}"}
 
         ###
         #  system directory: $DOCKER_STACK_SYSTEM_DATA_PATH
@@ -109,9 +137,9 @@ in
 
         ct_pull_images () {
           for stack_dir in "$@" ; do
-            if [ ! -f "$stack_dir"/.norestart ]; then
+            if [ ! -f "''${stack_dir%/}"/.norestart ]; then
               echo "**** [container-tool] [pull] Pulling Images - $stack_dir"
-              $docker_compose_bin -f "$stack_dir"/*compose.yml pull
+              $docker_compose_bin -f "''${stack_dir%/}"/*compose.yml pull
             else
               echo "**** [container-tool] [pull] Skipping - $stack_dir"
             fi
@@ -120,11 +148,11 @@ in
 
         ct_pull_restart () {
           for stack_dir in "$@" ; do
-            if [ ! -f "$stack_dir"/.norestart ]; then
+            if [ ! -f "''${stack_dir%/}"/.norestart ]; then
               echo "**** [container-tool] [pull_restart] Pulling Images - $stack_dir"
-              $docker_compose_bin -f "$stack_dir"/*compose.yml pull
+              $docker_compose_bin -f "''${stack_dir%/}"/*compose.yml pull
               echo "**** [container-tool] [pull_restart] Bringing up stack - $stack_dir"
-              $docker_compose_bin -f "$stack_dir"/*compose.yml up -d
+              $docker_compose_bin -f "''${stack_dir%/}"/*compose.yml up -d
             else
               echo "**** [container-tool] [pull_restart] Skipping - $stack_dir"
             fi
@@ -133,11 +161,11 @@ in
 
         ct_restart () {
           for stack_dir in "$@" ; do
-            if [ ! -f "$stack_dir"/.norestart ]; then
+            if [ ! -f "''${stack_dir%/}"/.norestart ]; then
               echo "**** [container-tool] [restart] Bringing down stack - $stack_dir"
-              $docker_compose_bin -f "$stack_dir"/*compose.yml down --timeout $DOCKER_COMPOSE_TIMEOUT
+              $docker_compose_bin -f "''${stack_dir%/}"/*compose.yml down --timeout $DOCKER_COMPOSE_TIMEOUT
               echo "**** [container-tool] [restart] Bringing up stack - $stack_dir"
-              $docker_compose_bin -f "$stack_dir"/*compose.yml up -d
+              $docker_compose_bin -f "''${stack_dir%/}"/*compose.yml up -d
             else
               echo "**** [container-tool] [restart] Skipping - $stack_dir"
             fi
@@ -146,7 +174,7 @@ in
 
         ct_restart_service () {
           for stack_dir in "$@" ; do
-            if [ ! -f "$stack_dir"/.norestart ]; then
+            if [ ! -f "''${stack_dir%/}"/.norestart ]; then
               if $dsudo systemctl list-unit-files docker-"$stack_dir".service &>/dev/null ; then
                 echo "**** [container-tool] [restart] Bringing down stack - $stack_dir"
                 $dsudo systemctl stop docker-"$stack_dir".service
@@ -165,7 +193,7 @@ in
         ct_stop () {
           for stack_dir in "$@" ; do
             echo "**** [container-tool] [stop] Stopping stack - $stack_dir"
-            $docker_compose_bin -f "$stack_dir"/*compose.yml down --timeout $DOCKER_COMPOSE_TIMEOUT
+            $docker_compose_bin -f "''${stack_dir%/}"/*compose.yml down --timeout $DOCKER_COMPOSE_TIMEOUT
           done
         }
 
@@ -195,7 +223,7 @@ in
         ct_restart_sys_containers () {
           predef_order=($(echo "$DOCKER_STACK_SYSTEM_APP_RESTART_ORDER"))
           curr_order=()
-          for stack_dir in "$DOCKER_STACK_SYSTEM_DATA_PATH"/* ; do
+          for stack_dir in "''${DOCKER_STACK_SYSTEM_DATA_PATH%/}"/* ; do
             curr_order=("''${curr_order[@]}" "''${stack_dir##*/}")
           done
           ct_sort_order curr_order
@@ -210,7 +238,7 @@ in
               if [[ $stack_image =~ .*"db-backup".* ]] ; then
                 stack_container_name=$(echo "$stack_image" | $awk_bin '{print $1}')
                 echo "** Backing up database for '$stack_container_name' before stopping"
-                $docker_bin exec $stack_container_name /usr/local/bin/backup-now
+                $docker_bin exec $stack_container_name backup-now
               fi
             fi
             echo "** Gracefully stopping compose stack: $stack"
@@ -221,7 +249,7 @@ in
         ct_stop_sys_containers () {
           predef_order=($(echo "$DOCKER_STACK_SYSTEM_APP_RESTART_ORDER"))
           curr_order=()
-          for stack_dir in "$DOCKER_STACK_SYSTEM_DATA_PATH"/* ; do
+          for stack_dir in "''${DOCKER_STACK_SYSTEM_DATA_PATH%/}"/* ; do
             curr_order=("''${curr_order[@]}" "''${stack_dir##*/}")
           done
           ct_sort_order curr_order
@@ -230,8 +258,8 @@ in
 
         ct_pull_restart_containers () {
           curr_order=()
-          for stack_dir in "$DOCKER_COMPOSE_STACK_DATA_PATH"/*/ ; do
-            if [ "$DOCKER_COMPOSE_STACK_DATA_PATH""$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST" != "$stack_dir" ] && [ -s "$stack_dir"/*compose.yml ]; then
+          for stack_dir in "''${DOCKER_COMPOSE_STACK_DATA_PATH%/}"/*/ ; do
+            if [ "''${DOCKER_COMPOSE_STACK_DATA_PATH%/}"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST" != "$stack_dir" ] && [ -s "''${stack_dir%/}"/*compose.yml ]; then
               curr_order=("''${curr_order[@]}" "$stack_dir")
             fi
           done
@@ -244,8 +272,8 @@ in
 
         ct_restart_app_containers () {
           curr_order=()
-          for stack_dir in "$DOCKER_COMPOSE_STACK_DATA_PATH"/*/ ; do
-            if [ "$DOCKER_COMPOSE_STACK_DATA_PATH""$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST" != "$stack_dir" ] && [ -s "$stack_dir"/*compose.yml ]; then
+          for stack_dir in "''${DOCKER_COMPOSE_STACK_DATA_PATH%/}"/*/ ; do
+            if [ "''${DOCKER_COMPOSE_STACK_DATA_PATH}"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST" != "$stack_dir" ] && [ -s "''${stack_dir%/}"/*compose.yml ]; then
               curr_order=("''${curr_order[@]}" "$stack_dir")
             fi
           done
@@ -254,8 +282,8 @@ in
 
         ct_stop_app_containers () {
           curr_order=()
-          for stack_dir in "$DOCKER_COMPOSE_STACK_DATA_PATH"/*/ ; do
-            if [ "$DOCKER_COMPOSE_STACK_DATA_PATH""$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST" != "$stack_dir" ] && [ -s "$stack_dir"/*compose.yml ]; then
+          for stack_dir in "''${DOCKER_COMPOSE_STACK_DATA_PATH%/}"/*/ ; do
+            if [ "''${DOCKER_COMPOSE_STACK_DATA_PATH}"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST" != "$stack_dir" ] && [ -s "''${stack_dir%/}"/*compose.yml ]; then
               curr_order=("''${curr_order[@]}" "$stack_dir")
             fi
           done
@@ -263,11 +291,11 @@ in
         }
 
         ct_restart_first () {
-          if [ -s "$DOCKER_COMPOSE_STACK_DATA_PATH""$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"/*compose.yml ]; then
-            echo "**** [container-tool] [restart_first] Bringing down stack - $DOCKER_COMPOSE_STACK_DATA_PATH$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"
-            $docker_compose_bin -f "$DOCKER_COMPOSE_STACK_DATA_PATH"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"/*compose.yml down --timeout $DOCKER_COMPOSE_TIMEOUT
-            echo "**** [container-tool] [restart_first] Bringing up stack - $DOCKER_COMPOSE_STACK_DATA_PATH$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"
-            $docker_compose_bin -f "$DOCKER_COMPOSE_STACK_DATA_PATH"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"/*compose.yml up -d
+          if [ -s "''${DOCKER_COMPOSE_STACK_DATA_PATH}"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"/*compose.yml ]; then
+            echo "**** [container-tool] [restart_first] Bringing down stack - ''${DOCKER_COMPOSE_STACK_DATA_PATH%/}/$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"
+            $docker_compose_bin -f "''${DOCKER_COMPOSE_STACK_DATA_PATH%/}"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"/*compose.yml down --timeout $DOCKER_COMPOSE_TIMEOUT
+            echo "**** [container-tool] [restart_first] Bringing up stack - ''${DOCKER_COMPOSE_STACK_DATA_PATH%/}/$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"
+            $docker_compose_bin -f "''${DOCKER_COMPOSE_STACK_DATA_PATH%/}"/"$DOCKER_COMPOSE_STACK_APP_RESTART_FIRST"/*compose.yml up -d
           fi
         }
 
@@ -316,7 +344,10 @@ in
           shutdown)
             if [ "''${2-}" = "nobackup" ] ; then shutdown_str=" NOT " ; fi
             echo "**** [container-tool] Stopping all compose stacks and''${shutdown_str:-}backing up databases if a db-backup container exists"
+            ct_stop_app_containers
             ct_stop_stack
+            ct_stop_sys_containers
+            if [ ! -f "/var/lib/docker/.noprune" ]; then $docker_bin system prune -a -f; fi
           ;;
           stop)
             echo "**** [container-tool] Stopping all containers"
@@ -366,20 +397,25 @@ in
         };
 
         docker-container-manager-shutdown = {
-          enable = true;
           description = "Stop docker containers on shutdown";
-          before = [ "docker.service" ];
+          wantedBy = [ "docker.service" ];
+          after = [ "docker.service" ];
+          bindsTo = [ "docker.service" ];
+          before = [ "shutdown.target" ];
           serviceConfig = {
             Type = "oneshot";
-            ExecCondition = "/usr/bin/test -e /run/systemd/shutdown/ready";
-            ExecStart = [
-              "/bin/sh -c 'echo \"Executing system shutdown container management tasks\"'"
-              "/run/current-system/sw/bin/container-tool shutdown"
-            ];
-            RemainAfterExit = "no";
-            TimeoutSec = 900;
+            RemainAfterExit = "yes";
+            ExecStart = "${pkgs.coreutils}/bin/true";
+            ExecStop = pkgs.writeShellScript "container-shutdown-check" ''
+              if systemctl list-jobs | grep -q 'shutdown.target\|reboot.target\|halt.target\|poweroff.target'; then
+                echo "Executing system shutdown container management tasks"
+                /run/current-system/sw/bin/container-tool shutdown
+              else
+                echo "Skipping container shutdown - not a system shutdown/reboot"
+              fi
+            '';
+            TimeoutStopSec = 900;
           };
-          wantedBy = [ "shutdown.target" ];
         };
       };
     };
