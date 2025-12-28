@@ -12,7 +12,6 @@ in
   with lib;
 {
   options = {
-  options = {
     host.container.${container_name} = {
       enable = mkOption {
         default = false;
