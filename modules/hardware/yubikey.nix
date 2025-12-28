@@ -17,8 +17,6 @@ in
 
   config = mkIf cfg.enable {
     environment.systemPackages = with pkgs; [
-      #yubikey-manager
-      #yubikey-manager-qt
       yubikey-personalization
       yubico-piv-tool
       yubioath-flutter

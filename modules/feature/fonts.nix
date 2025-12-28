@@ -23,15 +23,14 @@ in
       packages = with pkgs; [
         dejavu_fonts
         liberation_ttf
-        #material-design-icons
         nerd-fonts.hack
         nerd-fonts.noto
         nerd-fonts.ubuntu
-        noto-fonts
+        #noto-fonts
         noto-fonts-color-emoji
         open-sans
         roboto
-        ubuntu_font_family
+        ubuntu-classic
       ];
 
       fontconfig = mkIf graphics.enable {
@@ -45,13 +44,11 @@ in
         defaultFonts = {
           serif = [
             "Noto Serif NF"
-            "Noto Serif"
             "Liberation Serif"
             "DejaVu Serif"
           ];
           sansSerif = [
             "Noto Sans NF"
-            "Noto Sans"
             "Roboto"
             "Open Sans"
             "Liberation Sans"
@@ -59,8 +56,7 @@ in
           ];
           monospace = [
             "Hack Nerd Font"
-            "NotoSansM Nerd Font Mono"
-            "Noto Sans Mono"
+            "NotoSansM NF"
             "DejaVu Sans Mono"
             "Liberation Mono"
           ];

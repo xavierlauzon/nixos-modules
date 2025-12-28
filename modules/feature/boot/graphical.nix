@@ -19,7 +19,7 @@ in
     boot = {
       plymouth = {
         enable = true ;
-        theme = "minecraft" ;
+        theme = "mc" ;
         themePackages = [ inputs.minecraft-plymouth-theme.packages.${pkgs.system}.plymouth-minecraft-theme ];
       };
     };
