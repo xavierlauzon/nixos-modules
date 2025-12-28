@@ -229,12 +229,12 @@ in
           role = role;
           serverAddr = optionalString isJoiningCluster cfg.cluster.serverURL;
           cni = "cilium";
+          gracefulNodeShutdown.enable = true;
         }
         // optionalAttrs (!isInitialServer) { tokenFile = config.sops.secrets.token.path; }
         # Path configurations
         # Defaults are handled upstream in the nixpkgs RKE2 service module.
         // optionalAttrs (cfg.advanced.configPath != null) { configPath = cfg.advanced.configPath; }
-        // optionalAttrs (cfg.advanced.dataDir != null) { dataDir = cfg.advanced.dataDir; }
         # Node identity configurations
         // optionalAttrs (cfg.cluster.nodeName != null) { nodeName = cfg.cluster.nodeName; }
         // optionalAttrs (cfg.cluster.nodeIP != null) { nodeIP = cfg.cluster.nodeIP; }
@@ -246,6 +246,9 @@ in
         // {
           # Flags configuration
           extraFlags = concatLists [
+            # Path configuration
+            (optional (cfg.advanced.dataDir != null)
+              "--data-dir=${cfg.advanced.dataDir}")
             # Server-only cluster networking configuration
             (optionals isServer [
               "--cluster-cidr=${cfg.networking.clusterCidr}"
