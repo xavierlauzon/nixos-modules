@@ -45,7 +45,7 @@ in
             enable = mkDefault false;
           };
           disks = {
-            enable = mkDefault true;
+            enable = mkDefault false;
             platter = mkDefault false;
           };
           thermal.enable = mkForce false;
@@ -113,16 +113,6 @@ in
         RuntimeWatchdogSec = "20s";
         RebootWatchdogSec = "30s";
         KExecWatchdogSec = "1m";
-      };
-      services = {
-        systemd-networkd.stopIfChanged = false; # Shortens network downtime when upgrading
-        systemd-resolved.stopIfChanged = false; # Fixes resolution failures during resolved upgrade
-        nix-daemon.serviceConfig.OOMScoreAdjust = mkDefault 250; # Favor killing nix builds over other services
-        nix-gc.serviceConfig = { # Reduce potential for nix-gc to affect perofmance of other services
-          CPUSchedulingPolicy = "batch";
-          IOSchedulingClass = "idle";
-          IOSchedulingPriority = 7;
-        };
       };
 
       sleep.extraConfig = ''
