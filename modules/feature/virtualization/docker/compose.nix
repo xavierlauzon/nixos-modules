@@ -52,12 +52,13 @@ in
            fi
           }
 
-          alias dcpull='$dsudo docker-compose pull'                                                                                        # Docker Compose Pull
-          alias dcu='$dsudo $docker_compose_bin up'                                                                                   # Docker Compose Up
-          alias dcud='$dsudo $docker_compose_bin up -d'                                                                               # Docker Compose Daemonize
-          alias dcd='$dsudo $docker_compose_bin down --timeout $DOCKER_COMPOSE_TIMEOUT'                                               # Docker Compose Down
-          alias dcl='$dsudo $docker_compose_bin logs -f'                                                                              # Docker Compose Logs
-          alias dcrecycle='$dsudo $docker_compose_bin down --timeout $DOCKER_COMPOSE_TIMEOUT ; $dsudo $docker_compose_bin up -d' # Docker Compose Restart
+          alias dcpull='$dsudo docker compose pull'                                                                              # Docker Compose Pull
+          alias dcps='$dsudo docker compose ps'                                                                                  # Docker Compose Ps
+          alias dcu='$dsudo docker compose up'                                                                                   # Docker Compose Up
+          alias dcud='$dsudo docker compose up -d'                                                                               # Docker Compose Daemonize
+          alias dcd='$dsudo docker compose down --timeout $DOCKER_COMPOSE_TIMEOUT'                                               # Docker Compose Down
+          alias dcl='$dsudo docker compose logs -f'                                                                              # Docker Compose Logs
+          alias dcrecycle='$dsudo docker compose down --timeout $DOCKER_COMPOSE_TIMEOUT ; $dsudo docker compose up -d'           # Docker Compose Restart
         '';
       };
     };
