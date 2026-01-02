@@ -19,7 +19,9 @@ in {
       rocmPackages.clr
       rocmPackages.clr.icd
       rocmPackages.rocminfo
+      rocmPackages.rocm-smi
       rocmPackages.rocm-runtime
+      psi-notify
     ];
 
     hardware.enableRedistributableFirmware = true;
