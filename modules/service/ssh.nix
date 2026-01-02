@@ -83,13 +83,13 @@ in
           }
         ];
         openFirewall = mkDefault true ;
-        startWhenNeeded = mkDefault false;
+        startWhenNeeded = mkDefault true;
         settings = {
           AuthenticationMethods = mkDefault authMethods;
           AcceptEnv = mkDefault (
-            if config.system.stateVersion == "25.11"
-            then "LANG LC_*"
-            else [ "LANG LC_*" ]
+            if lib.versionAtLeast config.system.stateVersion "26.05"
+            then [ "LANG LC_*" ]
+            else "LANG LC_*"
           );
           ChallengeResponseAuthentication = mkDefault true;
           Ciphers = mkIf cfg.harden [
