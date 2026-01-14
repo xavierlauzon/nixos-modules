@@ -83,7 +83,7 @@ in
           }
         ];
         openFirewall = mkDefault true ;
-        startWhenNeeded = mkDefault true;
+        startWhenNeeded = mkDefault false;
         settings = {
           AuthenticationMethods = mkDefault authMethods;
           AcceptEnv = mkDefault (
