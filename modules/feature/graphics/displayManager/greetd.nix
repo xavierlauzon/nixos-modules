@@ -38,7 +38,7 @@ with lib;
                 regreetBin = "${pkgs.regreet}/bin/regreet";
                 tuigreetBin = "${pkgs.tuigreet}/bin/tuigreet";
               in
-                if greeter == "tuigreet" then "${tuigreetBin} --time"
+                if greeter == "tuigreet" then "${tuigreetBin} --time --remember-session"
                 else if greeter == "gtk" then gtkgreetBin
                 else if greeter == "regreet" then regreetBin
                 else tuigreetBin

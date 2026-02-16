@@ -86,11 +86,6 @@ in
         startWhenNeeded = mkDefault false;
         settings = {
           AuthenticationMethods = mkDefault authMethods;
-          AcceptEnv = mkDefault (
-            if lib.versionAtLeast config.system.stateVersion "26.05"
-            then [ "LANG LC_*" ]
-            else "LANG LC_*"
-          );
           ChallengeResponseAuthentication = mkDefault true;
           Ciphers = mkIf cfg.harden [
             "chacha20-poly1305@openssh.com"
