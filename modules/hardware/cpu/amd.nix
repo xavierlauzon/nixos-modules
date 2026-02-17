@@ -6,8 +6,8 @@ let
 in {
   config = mkIf (device.cpu == "amd" || device.cpu == "vm-amd") {
    boot.blacklistedKernelModules = [ "k10temp" ];
-   #boot.extraModulePackages = [ config.boot.kernelPackages.zenpower ];
-   #boot.kernelModules = [ "zenpower" ];
+   boot.extraModulePackages = [ config.boot.kernelPackages.zenpower ];
+   boot.kernelModules = [ "zenpower" ];
 
    hardware.cpu.amd.updateMicrocode = true;
 
