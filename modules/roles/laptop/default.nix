@@ -41,7 +41,7 @@ in
           };
           thermal.enable = mkDefault true;
           tlp.enable = mkDefault true;
-          undervolt.enable = mkDefault true;
+          undervolt.enable = mkDefault false;
         };
       };
       filesystem = {
