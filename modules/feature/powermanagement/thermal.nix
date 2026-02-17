@@ -2,10 +2,8 @@
 
 let
   cfg = config.host.feature.powermanagement.thermal;
-  thermald =
-    if (config.host.hardware.cpu == "intel")
-    then true
-    else false;
+  isIntel = (config.host.hardware.cpu == "intel");
+  isAmd = (config.host.hardware.cpu == "amd");
 in
   with lib;
 {
@@ -17,7 +15,7 @@ in
         description = "Enables thermal management";
       };
       thermald = mkOption {
-        default = thermald;
+        default = isIntel;
         type = with types; bool;
         description = "Enables thermal management for Intel Architecture";
       };
@@ -25,8 +23,12 @@ in
   };
 
   config = mkIf cfg.enable {
+    environment.systemPackages = with pkgs; [
+      lm_sensors
+    ];
+
     services = {
-      thermald.enable = thermald;
+      thermald.enable = cfg.thermald;
     };
   };
 }
