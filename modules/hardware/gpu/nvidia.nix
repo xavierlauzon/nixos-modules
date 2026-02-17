@@ -4,23 +4,17 @@ let
   nvStable = config.boot.kernelPackages.nvidiaPackages.stable.version;
   nvBeta = config.boot.kernelPackages.nvidiaPackages.beta.version;
 
-  nvidia-offload = pkgs.writeShellScriptBin "nvidia-offload" ''
-    export __NV_PRIME_RENDER_OFFLOAD=1
-    export __NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0
-    export __GLX_VENDOR_LIBRARY_NAME=nvidia
-    export __VK_LAYER_NV_optimus=NVIDIA_only
-    exec "$@"
-  '';
-
   nvidiaPackage =
     if (versionOlder nvBeta nvStable)
     then config.boot.kernelPackages.nvidiaPackages.stable
     else config.boot.kernelPackages.nvidiaPackages.beta;
 
   device = config.host.hardware;
+  prime = config.host.hardware.prime;
   backend = config.host.feature.graphics.backend;
+  isHybrid = (device.gpu == "hybrid-nvidia" || device.gpu == "hybrid-amd-nvidia");
 in {
-  config = mkIf (device.gpu == "nvidia" || device.gpu == "hybrid-nvidia")  {
+  config = mkIf (device.gpu == "nvidia" || isHybrid)  {
     nixpkgs.config.allowUnfree = true;
 
     services.xserver = mkMerge [
@@ -56,13 +50,7 @@ boot = {
           LIBVA_DRIVER_NAME = "nvidia";
         })
 
-        (mkIf ((config.host.feature.graphics.enable) && (backend == "wayland")) {
-          WLR_NO_HARDWARE_CURSORS = "1";
-          #__GLX_VENDOR_LIBRARY_NAME = "nvidia";
-          #GBM_BACKEND = "nvidia-drm"; # breaks firefox apparently
-        })
-
-        (mkIf ((backend == "wayland") && (device.gpu == "hybrid-nvidia") && (config.host.feature.graphics.enable)) {
+        (mkIf ((backend == "wayland") && isHybrid && (config.host.feature.graphics.enable)) {
           __NV_PRIME_RENDER_OFFLOAD = "1";
           WLR_DRM_DEVICES = mkDefault "/dev/dri/card1:/dev/dri/card0";
         })
@@ -73,8 +61,6 @@ boot = {
         vulkan-loader
         vulkan-tools
         vulkan-validation-layers
-      #] ++  mkIf device.gpu == "hybrid-nvidia"  [ ## TODO Fix
-      #  "nvidia-offload"
       ];
     };
 
@@ -82,19 +68,24 @@ boot = {
       nvidia = {
         package = mkDefault nvidiaPackage;
         modesetting.enable = mkDefault true;
-        prime.offload.enableOffloadCmd = device.gpu == "hybrid-nvidia";
+        prime = {
+          offload.enableOffloadCmd = isHybrid;
+          amdgpuBusId = mkIf (prime.amdgpuBusId != "") prime.amdgpuBusId;
+          intelBusId = mkIf (prime.intelBusId != "") prime.intelBusId;
+          nvidiaBusId = mkIf (prime.nvidiaBusId != "") prime.nvidiaBusId;
+        };
         powerManagement = {
           enable = mkDefault true;
-          finegrained = device.gpu == "hybrid-nvidia";
+          finegrained = isHybrid;
         };
 
         open = mkDefault false;
         nvidiaSettings = false;
         nvidiaPersistenced = true;
-        forceFullCompositionPipeline = true;
+        forceFullCompositionPipeline = mkDefault false;
       };
 
-      opengl = {
+      graphics = {
         extraPackages = with pkgs; [
           nvidia-vaapi-driver
         ];
