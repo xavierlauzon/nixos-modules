@@ -17,6 +17,11 @@ in
         type = with types; bool;
         description = "Enables spin down for platter hard drives";
       };
+      nvme = mkOption {
+        default = true;
+        type = with types; bool;
+        description = "Enables NVMe monitoring and management tools";
+      };
     };
   };
 
@@ -24,6 +29,8 @@ in
     environment.systemPackages = with pkgs; [
       hdparm
       smartmontools
+    ] ++ optionals cfg.nvme [
+      nvme-cli
     ];
 
     services = {
