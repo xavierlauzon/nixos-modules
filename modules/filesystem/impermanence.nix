@@ -51,6 +51,13 @@ in
   config = lib.mkMerge [
   {
     boot.initrd = lib.mkMerge [
+      (lib.mkIf (cfg_impermanence.enable && config.host.filesystem.btrfs.enable) {
+        systemd.initrdBin = [
+          pkgs.gawk
+          pkgs.gnugrep
+        ];
+      })
+
       (lib.mkIf ((cfg_impermanence.enable) && (!cfg_encrypt.enable) && (config.host.filesystem.btrfs.enable)) {
         postDeviceCommands = pkgs.lib.mkBefore ''
           mkdir -p /mnt
