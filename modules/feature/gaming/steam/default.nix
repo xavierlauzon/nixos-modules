@@ -21,17 +21,17 @@ in
           steam-rom-manager
           steam-run
           steam-tui
+          vkbasalt
         ];
 
         programs.steam = {
           enable = true;
           remotePlay.openFirewall = true;
           dedicatedServer.openFirewall = true;
-          package = pkgs.steam.override {
-            extraPkgs = (pkgs: with pkgs; [
-              gamemode
-            ]);
-          };
+          extraPackages = with pkgs; [
+            gamemode
+            vkbasalt
+          ];
           extraCompatPackages = [
             proton-ge-bin
           ];
