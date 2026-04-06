@@ -9,7 +9,7 @@ in
     programs = {
       hyprland = {
         enable = mkDefault true;
-        package = pkgs.hyprland;
+        package = pkgs.unstable.hyprland;
         withUWSM  = true;
       };
     };
