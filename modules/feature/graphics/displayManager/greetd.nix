@@ -1,6 +1,24 @@
 { config, lib, pkgs, ... }:
 with lib;
 
+let
+  greetdCfg = config.host.feature.graphics.displayManager.greetd;
+  graphicsCfg = config.host.feature.graphics;
+
+  dmDesktops = "${config.services.displayManager.sessionData.desktops}";
+  waylandSessionDir = "${dmDesktops}/share/wayland-sessions";
+  xSessionDir = "${dmDesktops}/share/xsessions";
+
+  sessionDirs = lib.concatStringsSep ":" (
+    [ waylandSessionDir ]
+    ++ lib.optional config.services.xserver.enable xSessionDir
+  );
+
+  hyprlandUwsmEnabled =
+    graphicsCfg.windowManager.manager == "hyprland"
+    && config.programs.hyprland.withUWSM or false;
+in
+
 {
   options = {
     host.feature.graphics.displayManager.greetd = {
@@ -29,21 +47,24 @@ with lib;
       };
       greetd = {
         enable = mkDefault true;
+        useTextGreeter = mkDefault (greetdCfg.greeter.name == "tuigreet");
         settings = {
           default_session = {
             command = mkDefault (
               let
-                greeter = config.host.feature.graphics.displayManager.greetd.greeter.name;
+                greeter = greetdCfg.greeter.name;
                 gtkgreetBin = "${pkgs.gtkgreet}/bin/gtkgreet";
                 regreetBin = "${pkgs.regreet}/bin/regreet";
-                tuigreetBin = "${pkgs.tuigreet}/bin/tuigreet";
+                tuigreetBin = "${pkgs.unstable.tuigreet}/bin/tuigreet";
+                tuigreetCmd = if hyprlandUwsmEnabled
+                  then "${tuigreetBin} --time --remember --remember-session --cmd '${lib.getExe config.programs.uwsm.package} start hyprland-uwsm.desktop'"
+                  else "${tuigreetBin} --time --remember --remember-session --sessions ${sessionDirs}";
               in
-                if greeter == "tuigreet" then "${tuigreetBin} --time --remember-session"
-                else if greeter == "gtk" then gtkgreetBin
+                if greeter == "tuigreet" then tuigreetCmd
+                else if greeter == "gtk" then "${gtkgreetBin} -l -s ${waylandSessionDir}"
                 else if greeter == "regreet" then regreetBin
-                else tuigreetBin
+                else tuigreetCmd
             );
-            #user = "greeter";
           };
         };
       };
