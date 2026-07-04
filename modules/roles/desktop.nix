@@ -31,8 +31,8 @@ in
           enable = mkDefault true;
         };
         graphics = {
-          enable = mkDefault true;            # We're working with a GUI here
-          acceleration = mkDefault true;      # Since we have a GUI, we want openGL
+          enable = mkDefault true;
+          acceleration = mkDefault true;
         };
         powermanagement = {
           battery.enable = mkDefault false;

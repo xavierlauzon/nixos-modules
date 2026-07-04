@@ -16,6 +16,12 @@ in
           efi.enable = mkDefault true;
           graphical.enable = mkDefault true;
         };
+        development = {
+          crosscompilation = {
+            enable = mkDefault true;
+            platform = "aarch64-linux";
+          };
+        };
         documentation = {
           enable = mkDefault true;
           man = {
@@ -26,8 +32,8 @@ in
           enable = mkDefault true;
         };
         graphics = {
-          enable = mkDefault true;            # We're working with a GUI here
-          acceleration = mkDefault true;      # Since we have a GUI, we want openGL
+          enable = mkDefault true;
+          acceleration = mkDefault true;
         };
         powermanagement = {
           battery.enable = mkDefault true;
@@ -42,6 +48,15 @@ in
           thermal.enable = mkDefault true;
           tlp.enable = mkDefault true;
           undervolt.enable = mkDefault false;
+        };
+        virtualization = {
+          docker = {
+            enable = mkDefault true;
+          };
+          virtd = {
+            client.enable = mkDefault false;
+            daemon.enable = mkDefault false;
+          };
         };
       };
       filesystem = {
