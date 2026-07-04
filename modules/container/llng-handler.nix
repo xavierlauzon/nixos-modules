@@ -136,15 +136,15 @@ in
 
       resources = {
         memory = {
-          max = mkDefault "512M";
+          max = mkDefault "2G";
         };
       };
 
       labels = {
         "traefik.enable" = "true";
-        "traefik.http.routers.${hostname}-llng-handler.rule" = "Host(`${hostname}.handler.auth.${config.host.network.dns.domain}`)";
-        "traefik.http.services.${hostname}-llng-handler.loadbalancer.server.port" = toString cfg.ports.llng.container;
-        "traefik.proxy.visibility" = "public";
+        "traefik.http.routers.${hostname}-llng-handler.rule" = "Host(`${hostname}-handler.auth.${config.host.network.dns.domain}`)";
+        "traefik.http.services.${hostname}-llng-handler.loadbalancer.server.port" = "80";
+        "traefik.proxy.visibility" = "internal";
       };
 
       ports = if cfg.ports.llng.enable then [
@@ -182,7 +182,15 @@ in
 
         "MODE" = mkDefault "HANDLER";
         "HANDLER_SOCKET_TCP_PORT" = toString cfg.ports.llng.container;
-        "LLNG_DOMAIN" = mkDefault config.host.network.dns.domain;
+        "DOMAIN_NAME" = mkDefault config.host.network.dns.domain;
+        "HANDLER_HOSTNAME" = mkDefault "${hostname}-handler.auth.${config.host.network.dns.domain}";
+
+        "INSTANCE_SESSIONS_ACTIVE_TYPE" = "NONE";
+        "INSTANCE_SESSIONS_PERSISTENT_TYPE" = "NONE";
+
+        "LOG_LEVEL" = "info";
+        "LOG_TYPE" = "FILE";
+        "LOG_USER_TYPE" = "FILE";
       };
 
       secrets = {
@@ -194,7 +202,7 @@ in
       networking = {
         networks = [
           "services"
-          "proxy"
+          "proxy-internal"
         ];
         aliases = {
           default = mkDefault true;
