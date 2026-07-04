@@ -65,7 +65,7 @@ in
 
     services.resolved = {
       enable = true;
-      extraConfig = mkIf (cfg.stub == false) "DNSStubListener=no";
+      settings.Resolve = mkIf (cfg.stub == false) { DNSStubListener = "no"; };
     };
   };
 }
