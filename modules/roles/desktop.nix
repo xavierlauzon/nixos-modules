@@ -53,8 +53,8 @@ in
             enable = mkDefault true;
           };
           virtd = {
-            client.enable = mkDefault true;
-            daemon.enable = mkDefault true;
+            client.enable = mkDefault false;
+            daemon.enable = mkDefault false;
           };
         };
       };
