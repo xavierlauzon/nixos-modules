@@ -109,16 +109,17 @@ in
 
     systemd = {
       enableEmergencyMode = mkDefault false;          # Allow system to continue booting in headless mode.
-      settings.Manager = mkDefault {                  # See https://0pointer.de/blog/projects/watchdog.html
-        RuntimeWatchdogSec = "20s";
-        RebootWatchdogSec = "30s";
-        KExecWatchdogSec = "1m";
+      settings = mkDefault {
+        Manager = {                  # See https://0pointer.de/blog/projects/watchdog.html
+          RuntimeWatchdogSec = "20s";
+          RebootWatchdogSec = "30s";
+          KExecWatchdogSec = "1m";
+        };
       };
-
-      sleep.extraConfig = ''
-        AllowSuspend=no
-        AllowHibernation=no
-      '';
+      sleep.settings.Sleep = {
+        AllowSuspend = "no";
+        AllowHibernation = "no";
+      };
     };
   };
 }
