@@ -9,7 +9,7 @@ in {
       enable = mkOption {
         default = false;
         type = with types; bool;
-        description = "Enables security hardening features";        # NOTE: enabling this may break some things
+        description = "Enables security hardening features";
       };
     };
   };
@@ -21,7 +21,7 @@ in {
         "ax25"
         "netrom"
         "rose"
-        # Old or rare or insufficiently audited filesystems
+        # Old or rare filesystems insufficiently audited
         "adfs"
         "affs"
         "bfs"
@@ -50,33 +50,28 @@ in {
       ];
 
       kernel.sysctl = {
-        "kernel.ftrace_enabled" = mkDefault false;        # Disable ftrace debugging
-        "kernel.kptr_restrict" = mkOverride 500 2;        # Hide kptrs even for processes with CAP_SYSLOG
-        "kernel.sysrq" = mkDefault 0;                     # The Magic SysRq key is a key combo that allows users connected to the Linux kernel to perform some low-level commands. Disable it, since we don't need it, and is a potential security concern.
-        "kernel.yama.ptrace_scope" = mkDefault 2;         # Restrict ptrace() usage to processes with a pre-defined relationship (e.g., parent/child)
-        "net.core.bpf_jit_enable" = mkDefault false;      # Disable bpf() JIT (to eliminate spray attacks)
+        "kernel.ftrace_enabled" = mkDefault false;       # Disable ftrace debugging
+        "kernel.kptr_restrict" = mkOverride 500 2;       # Hide kptrs even for processes with CAP_SYSLOG
+        "kernel.sysrq" = mkDefault 0;                    # Disable Magic SysRq key (security concern)
+        "kernel.yama.ptrace_scope" = mkDefault 2;        # Restrict ptrace() usage to related processes
+
+        "net.core.bpf_jit_enable" = mkDefault false;     # Override when using CNI like Cilium (K8s)
+        "net.core.bpf_jit_harden" = mkDefault 2;         # May cause slight performance degredation
       };
     };
 
     security = {
       allowSimultaneousMultithreading = mkDefault false;
-      allowUserNamespaces = mkDefault true;     # User namespaces are required for sandboxing. Better than nothing imo.
+      allowUserNamespaces = mkDefault true;              # User namespaces required for sandboxing/Docker
       apparmor = {
         enable = mkDefault true;
         killUnconfinedConfinables = mkDefault true;
         packages = [ pkgs.apparmor-profiles ];
       };
-      auditd.enable = mkDefault true;           # TODO: make this optional, audit logs get massive really quick
-      audit = {
-        enable = mkDefault true;
-        backlogLimit = 8192;
-        failureMode = "printk";
-        rules = [ "-a exit,always -F arch=b64 -S execve" ];
-      };
-      forcePageTableIsolation = mkDefault true; # force-enable the Page Table Isolation (PTI) Linux kernel feature
-      lockKernelModules = mkDefault false;      # breaks virtd, wireguard and iptables
+      forcePageTableIsolation = mkDefault true;          # PTI mitigates Meltdown vulnerability
+      lockKernelModules = mkDefault false;               # Breaks virtd, wireguard and iptables
       pam = {
-        loginLimits = [                         # fix "too many files open"
+        loginLimits = [                                  # Fix "too many files open" for wheel group
           {
             domain = "@wheel";
             item = "nofile";
@@ -91,27 +86,27 @@ in {
           }
         ];
       };
-      polkit.extraConfig = ''                   # log polkit request actions
+      polkit.extraConfig = ''                           # Log polkit request actions
         polkit.addRule(function(action, subject) {
           polkit.log("user " +  subject.user + " is attempting action " + action.id + " from PID " + subject.pid);
         });
       '';
-      protectKernelImage = mkDefault true;
+      protectKernelImage = mkDefault true;               # Protect kernel image from modification
       sudo = {
         enable = mkDefault true;
         execWheelOnly = mkDefault true;
         extraConfig = ''
           Defaults env_keep += "EDITOR PATH"
-          Defaults lecture = never # rollback results in sudo lectures after each reboot
+          Defaults lecture = never                      # Rollback results in sudo lectures after each reboot
           Defaults passprompt="[31m sudo: password for %p@%h, running as %U:[0m "
           Defaults pwfeedback
           Defaults timestamp_timeout = 300
         '';
         wheelNeedsPassword = mkDefault false;
       };
-      unprivilegedUsernsClone = config.host.feature.virtualization.docker.enable; # Disable unprivileged user namespaces, unless containers are enabled
+      unprivilegedUsernsClone = config.host.feature.virtualization.docker.enable; # Disable unless containers enabled
       virtualisation = {
-        flushL1DataCache = "always";            #  flush the L1 data cache before entering guests
+        flushL1DataCache = "always";                     # Spectre mitigation - flush L1 cache before guests
       };
     };
   };
