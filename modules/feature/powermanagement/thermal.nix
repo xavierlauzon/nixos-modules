@@ -15,9 +15,9 @@ in
         description = "Enables thermal management";
       };
       thermald = mkOption {
-        default = isIntel;
+        default = isIntel || isAmd;
         type = with types; bool;
-        description = "Enables thermal management for Intel Architecture";
+        description = "Enables thermal management via thermald (supports both Intel and AMD)";
       };
     };
   };

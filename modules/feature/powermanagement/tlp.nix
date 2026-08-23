@@ -116,7 +116,7 @@ in
           #RUNTIME_PM_ON_BAT = "auto";
 
           #RUNTIME_PM_DENYLIST = "11:22.3 44:55.6";
-          RUNTIME_PM_DRIVER_DENYLIST = "mei_me nouveau radeon psmouse";
+          RUNTIME_PM_DRIVER_DENYLIST = "mei_me nouveau nvidia radeon psmouse";
 
           #RUNTIME_PM_ENABLE="11:22.3";
           #RUNTIME_PM_DISABLE="44:55.6";

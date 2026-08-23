@@ -1,12 +1,12 @@
 { config, lib, pkgs, ... }:
 with lib;
 let
-  device = config.host.hardware ;
-  backend = config.host.feature.graphics.backend;
+  device = config.host.hardware;
   graphics = config.host.feature.graphics.enable;
-  isHybridNvidia = (device.gpu == "hybrid-amd-nvidia");
+  isHybridNvidia = (device.gpu.type == "hybrid-amd-nvidia");
+  renderNvidia = device.render == "nvidia";
 in {
-  config = mkIf (device.gpu == "amd" || device.gpu == "hybrid-amd" || device.gpu == "hybrid-amd-nvidia" || device.gpu == "integrated-amd")  {
+  config = mkIf (device.gpu.type == "amd" || device.gpu.type == "hybrid-amd" || device.gpu.type == "hybrid-amd-nvidia" || device.gpu.type == "integrated-amd") {
     boot = lib.mkMerge [
       (lib.mkIf (lib.versionAtLeast pkgs.linux.version "6.2") {
         kernelModules = [
@@ -16,6 +16,7 @@ in {
     ];
 
     hardware.graphics.extraPackages = with pkgs; [
+      amdgpu_top
       mesa
       rocmPackages.clr
       rocmPackages.clr.icd
@@ -27,19 +28,18 @@ in {
     hardware.enableRedistributableFirmware = true;
 
     hardware.amdgpu = {
-        initrd.enable = true;
-        opencl.enable = true;
+      initrd.enable = true;
+      opencl.enable = true;
     };
 
-    # When paired with NVIDIA dGPU, let nvidia.nix handle LIBVA and videoDrivers
-    environment = mkIf (!isHybridNvidia) {
-      sessionVariables = mkIf (graphics) {
-        LIBVA_DRIVER_NAME = "radeonsi";
+    # When paired with NVIDIA dGPU, LIBVA handling depends on render mode:
+    # - render = "amd": iGPU handles video decode (radeonsi)
+    # - render = "nvidia": nvidia.nix handles LIBVA (nvidia driver)
+    # - non-hybrid: iGPU handles everything (radeonsi)
+    environment = mkIf (!isHybridNvidia || !renderNvidia) {
+      sessionVariables = mkIf graphics {
+        LIBVA_DRIVER_NAME = mkIf isHybridNvidia "radeonsi" "radeonsi";
       };
     };
-
-    services.xserver.videoDrivers = mkIf ((!isHybridNvidia) && (graphics) && (backend == "x")) [
-      "amdgpu"
-    ];
   };
 }

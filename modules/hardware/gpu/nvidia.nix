@@ -11,34 +11,29 @@ let
 
   device = config.host.hardware;
   prime = config.host.hardware.prime;
-  backend = config.host.feature.graphics.backend;
-  isHybrid = (device.gpu == "hybrid-nvidia" || device.gpu == "hybrid-amd-nvidia");
+  graphics = config.host.feature.graphics.enable;
+  isHybrid = (device.gpu.type == "hybrid-nvidia" || device.gpu.type == "hybrid-amd-nvidia");
+  isHybridAmd = (device.gpu.type == "hybrid-amd-nvidia");
+  isHybridIntel = (device.gpu.type == "hybrid-nvidia");
+  renderNvidia = device.render == "nvidia";
+  primeOffload = prime.mode == "offload";
 in {
-  config = mkIf (device.gpu == "nvidia" || isHybrid)  {
+  config = mkIf (device.gpu.type == "nvidia" || isHybrid) {
     nixpkgs.config.allowUnfree = true;
 
-    services.xserver = mkMerge [
+    assertions = mkIf isHybrid [
       {
-        videoDrivers = [ "nvidia" ];
+        assertion = (primeOffload -> (prime.amdgpuBusId != "" || prime.intelBusId != "") && prime.nvidiaBusId != "");
+        message = "Prime offload requires both iGPU and NVIDIA dGPU bus IDs to be set (host.hardware.prime.amdgpuBusId/intelBusId and host.hardware.prime.nvidiaBusId).";
       }
-
-      (mkIf ( backend == "x") {
-        # disable DPMS
-        monitorSection = ''
-          Option "DPMS" "false"
-        '';
-
-        # disable screen blanking in general
-        serverFlagsSection = ''
-          Option "StandbyTime" "0"
-          Option "SuspendTime" "0"
-          Option "OffTime" "0"
-          Option "BlankTime" "0"
-        '';
-      })
     ];
 
-boot = {
+    services.xserver.videoDrivers = mkMerge [
+      [ "nvidia" ]
+      (mkIf (isHybrid && primeOffload) [ "modesetting" ])
+    ];
+
+    boot = {
       blacklistedKernelModules = [
         "nouveau"
       ];
@@ -46,16 +41,19 @@ boot = {
 
     environment = {
       sessionVariables = mkMerge [
-        (mkIf (config.host.feature.graphics.enable) {
-          LIBVA_DRIVER_NAME = "nvidia";
+        (mkIf graphics {
+          LIBVA_DRIVER_NAME = mkIf renderNvidia "nvidia" (mkIf isHybridAmd "radeonsi" "iHD");
         })
 
-        (mkIf ((backend == "wayland") && isHybrid && (config.host.feature.graphics.enable)) {
+        (mkIf (renderNvidia && graphics) {
           __NV_PRIME_RENDER_OFFLOAD = "1";
-          WLR_DRM_DEVICES = mkDefault "/dev/dri/card1:/dev/dri/card0";
+          __NV_PRIME_RENDER_OFFLOAD_PROVIDER = "NVIDIA-G0";
+          __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+          __VK_LAYER_NV_optimus = "NVIDIA_only";
         })
       ];
-      systemPackages = with pkgs; mkIf (config.host.feature.graphics.enable) [
+
+      systemPackages = with pkgs; mkIf graphics [
         libva
         libva-utils
         vulkan-loader
@@ -68,19 +66,28 @@ boot = {
       nvidia = {
         package = mkDefault nvidiaPackage;
         modesetting.enable = mkDefault true;
+        open = mkDefault true;
+
         prime = {
-          offload.enableOffloadCmd = isHybrid;
+          offload = {
+            enable = mkIf isHybrid (mkDefault primeOffload);
+            enableOffloadCmd = mkIf isHybrid true;
+          };
           amdgpuBusId = mkIf (prime.amdgpuBusId != "") prime.amdgpuBusId;
           intelBusId = mkIf (prime.intelBusId != "") prime.intelBusId;
           nvidiaBusId = mkIf (prime.nvidiaBusId != "") prime.nvidiaBusId;
         };
+
         powerManagement = {
           enable = mkDefault true;
-          finegrained = isHybrid;
+          finegrained = mkIf isHybrid (mkDefault true);
         };
 
-        open = mkDefault false;
-        nvidiaSettings = false;
+        dynamicBoost = mkIf isHybrid {
+          enable = mkDefault true;
+        };
+
+        nvidiaSettings = mkDefault true;
         nvidiaPersistenced = true;
         forceFullCompositionPipeline = mkDefault false;
       };
