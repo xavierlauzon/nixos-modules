@@ -4,7 +4,7 @@ let
 in
   with lib;
 {
-  config = mkIf (device.cpu == "ampere") {
+  config = mkIf (device.cpu == "arm") {
     nixpkgs.hostPlatform = "aarch64-linux";
   };
 }
