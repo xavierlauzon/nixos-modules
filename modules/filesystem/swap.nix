@@ -54,7 +54,7 @@ in
         device = cfg.file;
         randomEncryption = {
           enable = cfg.encrypt;
-          allowDiscards = "once";
+          allowDiscards = true;
         };
         size = cfg.size;
       }];
