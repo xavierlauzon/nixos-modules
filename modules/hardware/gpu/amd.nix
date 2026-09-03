@@ -4,7 +4,7 @@ let
   device = config.host.hardware;
   graphics = config.host.feature.graphics.enable;
   isHybridNvidia = (device.gpu.type == "hybrid-amd-nvidia");
-  renderNvidia = device.render == "nvidia";
+  renderNvidia = device.gpu.render == "nvidia";
 in {
   config = mkIf (device.gpu.type == "amd" || device.gpu.type == "hybrid-amd" || device.gpu.type == "hybrid-amd-nvidia" || device.gpu.type == "integrated-amd") {
     boot = lib.mkMerge [
@@ -38,7 +38,7 @@ in {
     # - non-hybrid: iGPU handles everything (radeonsi)
     environment = mkIf (!isHybridNvidia || !renderNvidia) {
       sessionVariables = mkIf graphics {
-        LIBVA_DRIVER_NAME = mkIf isHybridNvidia "radeonsi" "radeonsi";
+        LIBVA_DRIVER_NAME = mkIf isHybridNvidia "radeonsi";
       };
     };
   };

@@ -15,11 +15,10 @@ let
   isHybrid = (device.gpu.type == "hybrid-nvidia" || device.gpu.type == "hybrid-amd-nvidia");
   isHybridAmd = (device.gpu.type == "hybrid-amd-nvidia");
   isHybridIntel = (device.gpu.type == "hybrid-nvidia");
-  renderNvidia = device.render == "nvidia";
+  renderNvidia = device.gpu.render == "nvidia";
   primeOffload = prime.mode == "offload";
 in {
   config = mkIf (device.gpu.type == "nvidia" || isHybrid) {
-    nixpkgs.config.allowUnfree = true;
 
     assertions = mkIf isHybrid [
       {
@@ -42,7 +41,7 @@ in {
     environment = {
       sessionVariables = mkMerge [
         (mkIf graphics {
-          LIBVA_DRIVER_NAME = mkIf renderNvidia "nvidia" (mkIf isHybridAmd "radeonsi" "iHD");
+          LIBVA_DRIVER_NAME = if renderNvidia then "nvidia" else if isHybridAmd then "radeonsi" else "iHD";
         })
 
         (mkIf (renderNvidia && graphics) {

@@ -20,7 +20,7 @@ in
 
     host.hardware.gpu.render = mkOption {
       type = types.enum [ "amd" "nvidia" null ];
-      default = mkIf isHybrid "amd" null;
+      default = if isHybrid then "amd" else null;
       description = ''
         Which GPU handles rendering in hybrid mode.
         - "amd": iGPU handles default rendering; use nvidia-offload for dGPU games/apps.
@@ -31,7 +31,7 @@ in
 
     host.hardware.prime.mode = mkOption {
       type = types.enum [ "offload" null ];
-      default = mkIf isHybrid "offload" null;
+      default = if isHybrid then "offload" else null;
       description = ''
         PRIME mode for hybrid GPU setups.
         - "offload": iGPU displays, dGPU renders on demand via nvidia-offload.
