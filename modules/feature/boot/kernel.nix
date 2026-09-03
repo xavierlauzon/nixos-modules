@@ -32,6 +32,17 @@ in
         type = types.str;
         description = "Kernel package";
       };
+      config = mkOption {
+        default = { };
+        type = types.attrsOf types.attrs;
+        example = literalExpression ''
+          with lib.kernel; {
+            NO_PAGE_MAPCOUNT = yes;
+            USB_UAS = module;
+          }
+        '';
+        description = "Kernel configuration options";
+      };
       parameters = mkOption {
         type = types.listOf (types.strMatching ''([^"[:space:]]|"[^"]*")+'' // {
           name = "parameters";
@@ -55,6 +66,14 @@ in
       kernelModules = [] ++ cfg.modules;
       kernelPackages = mkDefault pkgs.linuxPackages_latest; ## TODO This should read the value of package pkgs.linuxPackages_${cfg.package} somehow
       kernelParams = [] ++ cfg.parameters;
+
+      kernelPatches = mkIf (cfg.config != { }) [
+        {
+          name = "host-kernel-config";
+          patch = null;
+          structuredExtraConfig = cfg.config;
+        }
+      ];
     };
   };
 }
